@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         try {
-            const response = await fetch('https://portfolio-predictor-s6me.onrender.com', {
+            const response = await fetch('https://portfolio-predictor-s6me.onrender.com/analyse', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ stocks: stocks })
