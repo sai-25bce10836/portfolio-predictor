@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProFolio | Institutional Grade Analytics</title>
+    <!-- Google Fonts for professional typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- TradingView Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Sidebar: Portfolio Inputs -->
+        <aside class="sidebar glass-panel">
+            <div class="brand">
+                <div class="logo"></div>
+                <h2>ProFolio Analytics</h2>
+            </div>
+            <p class="subtitle">AI-Driven Portfolio Modeling</p>
+            
+            <div class="portfolio-setup">
+                <h3>Asset Allocation</h3>
+                <div id="portfolio-list"></div>
+                <div class="action-buttons">
+                    <button id="add-btn" class="btn secondary">+ Add Asset</button>
+                    <button id="analyze-btn" class="btn primary">Execute Analysis</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Main Area: Dashboard & Charts -->
+        <main class="main-content">
+            <!-- Top Metric Cards -->
+            <div class="metrics-grid">
+                <div class="metric-card glass-panel">
+                    <span class="label">Total Current NAV</span>
+                    <h3 id="tot-current">$0.00</h3>
+                </div>
+                <div class="metric-card glass-panel">
+                    <span class="label">Projected NAV (T+1)</span>
+                    <h3 id="tot-predicted">$0.00</h3>
+                </div>
+                <div class="metric-card glass-panel">
+                    <span class="label">Alpha / Expected Variance</span>
+                    <h3 id="tot-change">0.00%</h3>
+                </div>
+            </div>
+
+            <!-- Main Chart Area -->
+            <div class="chart-container glass-panel hidden" id="chart-section">
+                <div class="chart-header">
+                    <h3 id="chart-title">Select an asset to view forecast</h3>
+                    <span id="chart-accuracy" class="badge"></span>
+                </div>
+                <div id="tv-chart" class="tv-chart"></div>
+            </div>
+
+            <!-- Detailed Breakdown Table -->
+            <div class="table-container glass-panel hidden" id="results-section">
+                <h3>Portfolio Breakdown</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Position Size</th>
+                            <th>Market Price</th>
+                            <th>Predicted (T+1)</th>
+                            <th>Expected Δ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body">
+                        <!-- Results injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Institutional Disclaimer -->
+    <div class="warning-footer">
+        <div class="marquee">
+            <span class="warning-icon">⚠️</span> <strong>REGULATORY DISCLAIMER:</strong> This terminal utilizes historical data and machine learning regressors to generate estimates for educational and informational purposes only. It does not constitute financial advice. The stock market is highly volatile, and predictive models cannot guarantee future results. Consult a licensed fiduciary before making investment decisions.
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
