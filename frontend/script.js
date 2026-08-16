@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function initChart() {
         const chartContainer = document.getElementById('tv-chart');
         chart = LightweightCharts.createChart(chartContainer, {
-            width: chartContainer.clientWidth,
-            height: 350,
+            width: chartContainer.clientWidth || 600,
+            height: chartContainer.clientHeight || 350,
             layout: {
                 background: { type: 'solid', color: 'transparent' },
                 textColor: '#94a3b8',
@@ -38,10 +38,25 @@ document.addEventListener('DOMContentLoaded', () => {
             lineStyle: LightweightCharts.LineStyle.Dotted,
         });
 
-        // Resize chart dynamically
-        window.addEventListener('resize', () => {
-            chart.applyOptions({ width: chartContainer.clientWidth });
-        });
+        // Automatically handle container resizing when unhidden or window resized
+        const resizeChart = () => {
+            if (chartContainer && chartContainer.clientWidth > 0) {
+                chart.applyOptions({
+                    width: chartContainer.clientWidth,
+                    height: chartContainer.clientHeight || 350
+                });
+            }
+        };
+
+        window.addEventListener('resize', resizeChart);
+
+        // Listen for layout/visibility changes on the parent container
+        if (window.ResizeObserver) {
+            const ro = new ResizeObserver(() => {
+                resizeChart();
+            });
+            ro.observe(chartContainer);
+        }
     }
 
     initChart();
@@ -152,10 +167,20 @@ document.addEventListener('DOMContentLoaded', () => {
             { time: itemData.prediction_date, value: itemData.predicted_price }
         ]);
 
-        chart.timeScale().fitContent();
-        
         // Update line color based on trend
         const trendColor = itemData.predicted_price >= lastHistorical.value ? '#10b981' : '#ef4444';
         predictedSeries.applyOptions({ color: trendColor });
+
+        // Force a layout recalculation after DOM unhiding
+        setTimeout(() => {
+            const chartContainer = document.getElementById('tv-chart');
+            if (chartContainer && chartContainer.clientWidth > 0) {
+                chart.applyOptions({
+                    width: chartContainer.clientWidth,
+                    height: chartContainer.clientHeight || 350
+                });
+                chart.timeScale().fitContent();
+            }
+        }, 50);
     }
 });
