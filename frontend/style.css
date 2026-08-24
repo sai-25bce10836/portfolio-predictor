@@ -558,7 +558,8 @@ input:focus {
 }
 
 .sensibull-slider {
-    -webkit-appearance: none;
+    -webkit-appearance: none; /* Safari / Legacy Chrome */
+    appearance: none;         /* Standard property */
     width: 140px;
     height: 4px;
     border-radius: 2px;
