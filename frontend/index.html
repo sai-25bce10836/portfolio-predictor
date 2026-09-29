@@ -4,14 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ProFolio Analytics | Institutional Terminal</title>
-    <!-- Google Fonts for crisp typography -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- TradingView Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="sensibull-theme">
-    <!-- Top Terminal Navigation Bar -->
     <header class="terminal-header">
         <div class="brand">
             <div class="brand-logo">P</div>
@@ -32,7 +29,6 @@
     </header>
 
     <div class="app-container">
-        <!-- Left Sidebar: Asset Ingestion & Allocation Panel -->
         <aside class="sidebar terminal-panel">
             <div class="panel-header">
                 <h3>Asset Allocation</h3>
@@ -40,10 +36,7 @@
             </div>
             
             <div class="portfolio-setup">
-                <div id="portfolio-list" class="asset-input-list">
-                    <!-- Dynamic stock input rows injected here -->
-                </div>
-
+                <div id="portfolio-list" class="asset-input-list"></div>
                 <div class="action-buttons">
                     <button id="add-btn" class="btn secondary">+ Add Asset</button>
                     <button id="analyze-btn" class="btn primary">
@@ -52,7 +45,6 @@
                 </div>
             </div>
 
-            <!-- Pre-set Stress Test Quick Actions -->
             <div class="quick-presets">
                 <span class="preset-label">Quick Scenario Presets</span>
                 <div class="preset-grid">
@@ -63,14 +55,11 @@
             </div>
         </aside>
 
-        <!-- Main Workspace: Metrics, Charts & Breakdown -->
         <main class="main-content">
-            <!-- Top Metric Cards Strip (Sensibull Summary Panel) -->
             <div class="metrics-grid">
                 <div class="metric-card terminal-panel">
                     <div class="metric-header">
                         <span class="label">Total Current NAV</span>
-                        <span class="metric-icon"></span>
                     </div>
                     <h3 id="tot-current">$0.00</h3>
                     <span class="metric-subtext">Base Portfolio Valuation</span>
@@ -79,7 +68,6 @@
                 <div class="metric-card terminal-panel highlight-blue">
                     <div class="metric-header">
                         <span class="label">Projected NAV (T+1)</span>
-                        <span class="metric-icon"></span>
                     </div>
                     <h3 id="tot-predicted">$0.00</h3>
                     <span class="metric-subtext">Machine Learning Forecast Target</span>
@@ -88,7 +76,6 @@
                 <div class="metric-card terminal-panel">
                     <div class="metric-header">
                         <span class="label">Alpha / Expected Variance</span>
-                        <span class="metric-icon"></span>
                     </div>
                     <h3 id="tot-change">0.00%</h3>
                     <span class="metric-subtext">Projected Portfolio Return</span>
@@ -97,14 +84,12 @@
                 <div class="metric-card terminal-panel">
                     <div class="metric-header">
                         <span class="label">Model Confidence</span>
-                        <span class="metric-icon"></span>
                     </div>
                     <h3 id="avg-confidence">0.00%</h3>
                     <span class="metric-subtext">Average Portfolio R² Rating</span>
                 </div>
             </div>
 
-            <!-- View Workspace Controls (Chart vs Table Toggle) -->
             <div class="workspace-tabs">
                 <div class="tab-group">
                     <button class="workspace-tab active" id="btn-show-chart">Interactive Trajectory Chart</button>
@@ -116,22 +101,26 @@
                 </div>
             </div>
 
-            <!-- Central Workspace Viewport -->
             <div class="viewport-container terminal-panel">
-                <!-- Main TradingView Forecast Chart Area -->
                 <div class="chart-container hidden" id="chart-section">
                     <div class="chart-header">
                         <div class="chart-title-group">
                             <h3 id="chart-title">Select an asset to view price forecast</h3>
                             <span class="subtitle-ticker">T+1 Trajectory Analysis</span>
                         </div>
+
+                        <!-- Multi-Model Architecture Pill Bar -->
+                        <div class="model-selector-bar">
+                            <button class="model-pill active" data-model="current">Linear Baseline</button>
+                            <button class="model-pill" data-model="gradient">Gradient Boost (XGB)</button>
+                            <button class="model-pill" data-model="deep_learning">Deep Learning (LSTM)</button>
+                        </div>
+
                         <span id="chart-accuracy" class="badge"></span>
                     </div>
-                    <!-- Fixed layout container for TradingView canvas -->
                     <div id="tv-chart" class="tv-chart" style="position: relative; height: 410px; width: 100%;"></div>
                 </div>
 
-                <!-- Detailed Breakdown Table -->
                 <div class="table-container hidden" id="results-section">
                     <div class="table-header">
                         <h3>Positions & Model Metrics</h3>
@@ -149,19 +138,15 @@
                                     <th>Confidence (R²)</th>
                                 </tr>
                             </thead>
-                            <tbody id="results-body">
-                                <!-- Dynamically populated via script.js -->
-                            </tbody>
+                            <tbody id="results-body"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Sensibull-Style Interactive "What-If" Stress Testing Control Bar -->
             <div class="stress-test-bar terminal-panel">
                 <div class="stress-header">
                     <div class="stress-title">
-                        <span class="slider-icon"></span>
                         <div>
                             <h4>Interactive "What-If" Allocation Stress Test</h4>
                             <span class="stress-sub">Simulate weight adjustments to recalculate projected portfolio variance in real time</span>
@@ -180,10 +165,9 @@
         </main>
     </div>
 
-    <!-- Terminal Footer & Regulatory Disclaimer -->
     <footer class="warning-footer">
         <div class="marquee">
-            <span class="warning-icon">⚠️</span> <strong>INSTITUTIONAL DISCLAIMER:</strong> ProFolio Analytics utilizes time-series data and machine learning regression algorithms to generate mathematical forecasts for educational and research purposes only. Projections do not constitute financial advice. Market assets carry inherent risk.
+            <span class="disclaimer-badge">NOTICE</span> <strong>INSTITUTIONAL DISCLAIMER:</strong> ProFolio Analytics utilizes time-series data and machine learning regression algorithms to generate mathematical forecasts for educational and research purposes only. Projections do not constitute financial advice. Market assets carry inherent risk.
         </div>
     </footer>
 

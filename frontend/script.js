@@ -1,24 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
+    // Dynamic API Base URL detection
+    const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://127.0.0.1:8000'
+        : 'https://portfolio-predictor-s6me.onrender.com';
+
     const portfolioList = document.getElementById('portfolio-list');
     const addBtn = document.getElementById('add-btn');
     const analyzeBtn = document.getElementById('analyze-btn');
-    
     const btnShowChart = document.getElementById('btn-show-chart');
     const btnShowTable = document.getElementById('btn-show-table');
     const chartSection = document.getElementById('chart-section');
     const resultsSection = document.getElementById('results-section');
-    
     const weightSlider = document.getElementById('weight-slider');
     const sliderValue = document.getElementById('slider-value');
     const simulateBtn = document.getElementById('simulate-btn');
     const resetLayoutBtn = document.getElementById('reset-layout-btn');
 
-    let globalPortfolioData = []; // Store raw individual stock results
-    let rawSummaryData = null;     // Store base summary metrics
+    let globalPortfolioData = [];
+    let rawSummaryData = null;
+    let lastApiResponse = null; // Stored payload for dynamic model switching
     let chart, lineSeries, predictedSeries;
 
-    // 1. Initialize TradingView Chart with Sensibull Dark Theme
+    // State tracking for active model selection & focused asset
+    let activeModel = 'current'; // Defaults to 'current' baseline
+    let selectedItemData = null;
+
     function initChart() {
         const chartContainer = document.getElementById('tv-chart');
         if (!chartContainer) return;
@@ -36,41 +42,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 horzLines: { color: '#1e2d42' },
             },
             crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-            timeScale: { 
-                borderColor: '#1e2d42',
-                timeVisible: true,
-                secondsVisible: false
-            },
-            rightPriceScale: {
-                borderColor: '#1e2d42',
-            }
+            timeScale: { borderColor: '#1e2d42', timeVisible: true, secondsVisible: false },
+            rightPriceScale: { borderColor: '#1e2d42' }
         });
 
-        // Historical Data Line (ProFolio Primary Blue)
-        lineSeries = chart.addLineSeries({
-            color: '#2563eb',
-            lineWidth: 2,
-            crosshairMarkerRadius: 5,
-        });
-
-        // Predicted Data Line (Sensibull Accent Green/Red)
-        predictedSeries = chart.addLineSeries({
-            color: '#00e676',
-            lineWidth: 2,
-            lineStyle: LightweightCharts.LineStyle.Dotted,
-        });
+        lineSeries = chart.addLineSeries({ color: '#2563eb', lineWidth: 2, crosshairMarkerRadius: 5 });
+        predictedSeries = chart.addLineSeries({ color: '#00e676', lineWidth: 2, lineStyle: LightweightCharts.LineStyle.Dotted });
 
         const resizeChart = () => {
             if (chartContainer && chartContainer.clientWidth > 0) {
-                chart.applyOptions({
-                    width: chartContainer.clientWidth,
-                    height: chartContainer.clientHeight || 410
-                });
+                chart.applyOptions({ width: chartContainer.clientWidth, height: chartContainer.clientHeight || 410 });
             }
         };
 
         window.addEventListener('resize', resizeChart);
-
         if (window.ResizeObserver) {
             const ro = new ResizeObserver(() => resizeChart());
             ro.observe(chartContainer);
@@ -78,8 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initChart();
-
-    // 2. Initial Asset Rows
     addStockRow('AAPL', 10);
     addStockRow('MSFT', 5);
 
@@ -97,36 +80,45 @@ document.addEventListener('DOMContentLoaded', () => {
         portfolioList.appendChild(row);
     }
 
-    // 3. Quick Scenario Presets
     document.querySelectorAll('.preset-chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
             const presetType = e.target.innerText.trim();
-            portfolioList.innerHTML = ''; // Clear current inputs
-
+            portfolioList.innerHTML = '';
             if (presetType === 'US Large Cap') {
-                addStockRow('AAPL', 10);
-                addStockRow('MSFT', 5);
-                addStockRow('GOOGL', 8);
+                addStockRow('AAPL', 10); addStockRow('MSFT', 5); addStockRow('GOOGL', 8);
             } else if (presetType === 'Tech Heavy') {
-                addStockRow('NVDA', 15);
-                addStockRow('TSLA', 10);
-                addStockRow('AMZN', 5);
+                addStockRow('NVDA', 15); addStockRow('TSLA', 10); addStockRow('AMZN', 5);
             } else if (presetType === 'Global Split') {
-                addStockRow('AAPL', 10);
-                addStockRow('ASML', 4);
-                addStockRow('TSM', 12);
+                addStockRow('AAPL', 10); addStockRow('ASML', 4); addStockRow('TSM', 12);
             }
         });
     });
 
-    // 4. Workspace Viewport Tab Switching (Chart vs Table View)
+    // Model Selector Pill Listener
+    document.querySelectorAll('.model-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+            document.querySelectorAll('.model-pill').forEach(p => p.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            activeModel = e.target.getAttribute('data-model');
+            
+            // Refresh table and summary metric cards for the selected model
+            if (lastApiResponse) {
+                displayResults(lastApiResponse);
+            }
+
+            // Re-render chart trajectory for the active asset
+            if (selectedItemData) {
+                renderChart(selectedItemData);
+            }
+        });
+    });
+
     btnShowChart.addEventListener('click', () => {
         btnShowChart.classList.add('active');
         btnShowTable.classList.remove('active');
         chartSection.classList.remove('hidden');
         resultsSection.classList.add('hidden');
-        
-        // Force chart layout refresh upon becoming visible
         setTimeout(() => {
             const chartContainer = document.getElementById('tv-chart');
             if (chartContainer && chart) {
@@ -143,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chartSection.classList.add('hidden');
     });
 
-    // Reset Workspace Action
     if (resetLayoutBtn) {
         resetLayoutBtn.addEventListener('click', () => {
             portfolioList.innerHTML = '';
@@ -154,7 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 5. Backend Execution Pipeline
     analyzeBtn.addEventListener('click', async () => {
         analyzeBtn.innerHTML = "<span>Executing Models...</span>";
         analyzeBtn.disabled = true;
@@ -164,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rows.forEach(row => {
             const sym = row.querySelector('.sym-input').value.trim().toUpperCase();
             const shares = parseFloat(row.querySelector('.share-input').value);
-            if(sym && !isNaN(shares)) stocks.push({ symbol: sym, shares: shares });
+            if (sym && !isNaN(shares)) stocks.push({ symbol: sym, shares: shares });
         });
 
         if (stocks.length === 0) {
@@ -175,23 +165,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch('https://portfolio-predictor-s6me.onrender.com/analyze', {
+            const response = await fetch(`${API_BASE_URL}/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ stocks: stocks })
             });
             
             if (!response.ok) throw new Error("Backend response error");
-            
             const data = await response.json();
+            
+            lastApiResponse = data;
             globalPortfolioData = data.individual_results;
             rawSummaryData = data.summary;
             
             displayResults(data);
             
-            // Auto-render chart for first valid stock
             const firstValid = globalPortfolioData.find(item => !item.error);
-            if(firstValid) renderChart(firstValid);
+            if (firstValid) renderChart(firstValid);
 
         } catch (error) {
             alert("Connection Error. Ensure FastAPI backend is running.");
@@ -201,61 +191,71 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 6. Display Analytics & Render UI Components
     function displayResults(data) {
-        // Activate Viewport Containers
-        chartSection.classList.remove('hidden');
-        btnShowChart.classList.add('active');
-        btnShowTable.classList.remove('active');
-        resultsSection.classList.add('hidden');
-        
         const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
-        // Update Header Metric Cards
-        document.getElementById('tot-current').innerText = formatMoney(data.summary.total_current_value);
-        document.getElementById('tot-predicted').innerText = formatMoney(data.summary.total_predicted_value);
+        let totalCurrentVal = 0.0;
+        let totalPredictedVal = 0.0;
+
+        const validItems = data.individual_results.filter(i => !i.error);
+
+        // Dynamically compute totals based on the currently selected activeModel
+        validItems.forEach(item => {
+            const itemCurrent = item.current_price * item.shares;
+            totalCurrentVal += itemCurrent;
+
+            const modelData = item.models 
+                ? item.models[activeModel] 
+                : { predicted_price: item.predicted_price };
+            
+            totalPredictedVal += (modelData.predicted_price * item.shares);
+        });
+
+        const overallPctChange = totalCurrentVal > 0 
+            ? ((totalPredictedVal - totalCurrentVal) / totalCurrentVal) * 100 
+            : 0.0;
+
+        document.getElementById('tot-current').innerText = formatMoney(totalCurrentVal);
+        document.getElementById('tot-predicted').innerText = formatMoney(totalPredictedVal);
         
         const pctEl = document.getElementById('tot-change');
-        const pct = data.summary.overall_percentage_change;
-        pctEl.innerText = `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
-        pctEl.className = pct >= 0 ? 'text-green' : 'text-red';
+        pctEl.innerText = `${overallPctChange > 0 ? '+' : ''}${overallPctChange.toFixed(2)}%`;
+        pctEl.className = overallPctChange >= 0 ? 'text-green' : 'text-red';
 
-        // Calculate Average Portfolio Confidence (R²)
-        const validItems = data.individual_results.filter(i => !i.error && i.accuracy !== undefined);
         const avgConfidence = validItems.length > 0
-            ? validItems.reduce((acc, curr) => acc + curr.accuracy, 0) / validItems.length
+            ? validItems.reduce((acc, curr) => {
+                const modelAcc = curr.models ? curr.models[activeModel].accuracy : curr.accuracy;
+                return acc + modelAcc;
+            }, 0) / validItems.length
             : 0;
         
         const avgConfidenceEl = document.getElementById('avg-confidence');
-        if (avgConfidenceEl) {
-            avgConfidenceEl.innerText = `${avgConfidence.toFixed(1)}%`;
-        }
+        if (avgConfidenceEl) avgConfidenceEl.innerText = `${avgConfidence.toFixed(1)}%`;
 
-        // Render Table Body
         const tbody = document.getElementById('results-body');
         tbody.innerHTML = '';
         
         data.individual_results.forEach(item => {
             const tr = document.createElement('tr');
-            if(item.error) {
+            if (item.error) {
                 tr.innerHTML = `<td colspan="6" class="text-red">${item.symbol}: ${item.error}</td>`;
             } else {
-                const isPositive = item.percentage_change >= 0;
+                const modelInfo = item.models ? item.models[activeModel] : {
+                    predicted_price: item.predicted_price,
+                    percentage_change: item.percentage_change,
+                    accuracy: item.accuracy
+                };
+                const isPositive = modelInfo.percentage_change >= 0;
                 tr.innerHTML = `
                     <td><strong>${item.symbol}</strong></td>
                     <td>${item.shares}</td>
                     <td>${formatMoney(item.current_price)}</td>
-                    <td>${formatMoney(item.predicted_price)}</td>
-                    <td class="${isPositive ? 'text-green' : 'text-red'}">
-                        ${isPositive ? '+' : ''}${item.percentage_change.toFixed(2)}%
-                    </td>
-                    <td><span class="badge">${item.accuracy.toFixed(1)}%</span></td>
+                    <td>${formatMoney(modelInfo.predicted_price)}</td>
+                    <td class="${isPositive ? 'text-green' : 'text-red'}">${isPositive ? '+' : ''}${modelInfo.percentage_change.toFixed(2)}%</td>
+                    <td><span class="badge">${modelInfo.accuracy.toFixed(1)}%</span></td>
                 `;
-                
-                // Click row to focus chart on asset
                 tr.addEventListener('click', () => {
                     renderChart(item);
-                    // Switch to chart view on row click
                     btnShowChart.click();
                 });
             }
@@ -263,39 +263,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 7. Render TradingView Trajectory Chart
     function renderChart(itemData) {
-        document.getElementById('chart-title').innerText = `${itemData.symbol} Target Trajectory`;
-        document.getElementById('chart-accuracy').innerText = `Model Confidence R²: ${itemData.accuracy.toFixed(1)}%`;
+        selectedItemData = itemData;
 
-        // Load Historical Time Series
+        const modelData = itemData.models 
+            ? itemData.models[activeModel] 
+            : { predicted_price: itemData.predicted_price, accuracy: itemData.accuracy, name: "Linear Baseline" };
+
+        document.getElementById('chart-title').innerText = `${itemData.symbol} Target Trajectory (${modelData.name})`;
+        document.getElementById('chart-accuracy').innerText = `Model Confidence R²: ${modelData.accuracy.toFixed(1)}%`;
+
         lineSeries.setData(itemData.history);
-
-        // Build Prediction Connector Line
         const lastHistorical = itemData.history[itemData.history.length - 1];
+        
         predictedSeries.setData([
             lastHistorical,
-            { time: itemData.prediction_date, value: itemData.predicted_price }
+            { time: itemData.prediction_date, value: modelData.predicted_price }
         ]);
 
-        // Dynamic Trajectory Coloring
-        const trendColor = itemData.predicted_price >= lastHistorical.value ? '#00e676' : '#ff5252';
+        const trendColor = modelData.predicted_price >= lastHistorical.value ? '#00e676' : '#ff5252';
         predictedSeries.applyOptions({ color: trendColor });
 
-        // Recalculate layout scales
         setTimeout(() => {
             const chartContainer = document.getElementById('tv-chart');
             if (chartContainer && chart) {
-                chart.applyOptions({
-                    width: chartContainer.clientWidth,
-                    height: chartContainer.clientHeight || 410
-                });
+                chart.applyOptions({ width: chartContainer.clientWidth, height: chartContainer.clientHeight || 410 });
                 chart.timeScale().fitContent();
             }
         }, 50);
     }
 
-    // 8. Sensibull "What-If" Stress-Testing Slider Integration
     if (weightSlider) {
         weightSlider.addEventListener('input', (e) => {
             const shiftVal = parseInt(e.target.value);
@@ -313,16 +310,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const shiftPercent = parseFloat(weightSlider.value) / 100;
             const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
-            // Simulating a portfolio shift adjustment on projected value
             const basePredicted = rawSummaryData.total_predicted_value;
             const simulatedPredicted = basePredicted * (1 + shiftPercent);
-            
             const baseCurrent = rawSummaryData.total_current_value;
             const simulatedPctChange = ((simulatedPredicted - baseCurrent) / baseCurrent) * 100;
 
-            // Update UI elements to reflect stress test scenario
             document.getElementById('tot-predicted').innerText = formatMoney(simulatedPredicted);
-            
             const pctEl = document.getElementById('tot-change');
             pctEl.innerText = `${simulatedPctChange > 0 ? '+' : ''}${simulatedPctChange.toFixed(2)}%`;
             pctEl.className = simulatedPctChange >= 0 ? 'text-green' : 'text-red';
