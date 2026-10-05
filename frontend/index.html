@@ -1,176 +1,280 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark h-full bg-slate-950 text-slate-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProFolio Analytics | Institutional Terminal</title>
+    <title>ProFolio Terminal | Institutional Quant ML Analytics</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        },
+                        panel: '#0f172a',
+                        card: '#1e293b',
+                        border: '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- TradingView Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="sensibull-theme">
-    <header class="terminal-header">
-        <div class="brand">
-            <div class="brand-logo">P</div>
-            <div class="brand-info">
-                <h1>ProFolio <span>Terminal</span></h1>
-                <span class="status-pill"><span class="pulse-dot"></span> Machine Learning Engine Ready</span>
+<body class="h-full font-sans bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- Terminal Header -->
+    <header class="h-14 border-b border-slate-800 bg-slate-900/90 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white font-mono shadow-lg shadow-blue-500/20">
+                P
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-bold tracking-tight text-sm text-slate-100">ProFolio <span class="text-blue-500 font-normal">Terminal</span></h1>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Engine Ready
+                    </span>
+                </div>
             </div>
         </div>
-        <nav class="terminal-nav">
-            <button class="nav-tab active" data-tab="terminal">Portfolio Builder</button>
-            <button class="nav-tab" data-tab="analytics">Risk & Alpha</button>
-            <button class="nav-tab" data-tab="model">Model Confidence (R²)</button>
+
+        <nav class="hidden md:flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-medium text-slate-400">
+            <button class="nav-tab active px-3 py-1.5 rounded-md text-white bg-slate-800 transition" data-tab="terminal">Portfolio Analytics</button>
+            <button class="nav-tab px-3 py-1.5 rounded-md hover:text-slate-200 transition" data-tab="analytics">Risk & Alpha</button>
+            <button class="nav-tab px-3 py-1.5 rounded-md hover:text-slate-200 transition" data-tab="model">Model Confidence (R²)</button>
         </nav>
-        <div class="header-actions">
-            <span class="market-badge">GLOBAL MARKETS: LIVE</span>
-            <button id="reset-layout-btn" class="btn icon-btn" title="Reset Workspace">↺</button>
+
+        <div class="flex items-center gap-3">
+            <span class="text-[11px] font-mono bg-slate-800/80 text-slate-300 px-2.5 py-1 rounded border border-slate-700/50">
+                NSE/BSE: LIVE
+            </span>
+            <button id="reset-layout-btn" class="p-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Reset Workspace">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
         </div>
     </header>
 
-    <div class="app-container">
-        <aside class="sidebar terminal-panel">
-            <div class="panel-header">
-                <h3>Asset Allocation</h3>
-                <span class="panel-subtitle">Multi-Exchange Portfolio Builder</span>
-            </div>
+    <!-- Main Workspace -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Sidebar: Broker Connect & ML Controls -->
+        <aside class="w-80 border-r border-slate-800 bg-slate-900/50 flex flex-col shrink-0 overflow-y-auto">
             
-            <div class="portfolio-setup">
-                <div id="portfolio-list" class="asset-input-list"></div>
-                <div class="action-buttons">
-                    <button id="add-btn" class="btn secondary">+ Add Asset</button>
-                    <button id="analyze-btn" class="btn primary">
-                        <span>Execute Forecast Engine</span>
+            <!-- Broker Authentication Card -->
+            <div class="p-4 border-b border-slate-800">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Broker Synchronization</h3>
+                
+                <div class="grid grid-cols-2 gap-1 p-1 bg-slate-950 rounded-lg border border-slate-800 mb-4 text-xs font-medium">
+                    <button id="btn-upstox-tab" class="broker-tab py-1.5 rounded-md bg-blue-600 text-white transition text-center font-semibold">Upstox</button>
+                    <button id="btn-dhan-tab" class="broker-tab py-1.5 rounded-md text-slate-400 hover:text-white transition text-center">Dhan API</button>
+                </div>
+
+                <!-- Upstox Config Block -->
+                <div id="upstox-panel" class="space-y-3">
+                    <button id="upstox-login-btn" type="button" class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition shadow-sm">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+                        Connect via Upstox OAuth
                     </button>
+                    
+                    <div class="relative">
+                        <label for="upstox-token-input" class="block text-[11px] font-mono text-slate-400 mb-1">Access Token</label>
+                        <input type="password" id="upstox-token-input" placeholder="Paste access_token or login above" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500 transition">
+                    </div>
+                </div>
+
+                <!-- Dhan Config Block -->
+                <div id="dhan-panel" class="space-y-3 hidden">
+                    <div>
+                        <label for="dhan-client-id" class="block text-[11px] font-mono text-slate-400 mb-1">Dhan Client ID</label>
+                        <input type="text" id="dhan-client-id" placeholder="e.g. 1000000001" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500 transition">
+                    </div>
+                    <div>
+                        <label for="dhan-token-input" class="block text-[11px] font-mono text-slate-400 mb-1">Dhan Access Token</label>
+                        <input type="password" id="dhan-token-input" placeholder="Paste Dhan API Token" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500 transition">
+                    </div>
                 </div>
             </div>
 
-            <div class="quick-presets">
-                <span class="preset-label">Quick Scenario Presets</span>
-                <div class="preset-grid">
-                    <button class="preset-chip">US Large Cap</button>
-                    <button class="preset-chip">Tech Heavy</button>
-                    <button class="preset-chip">Global Split</button>
+            <!-- ML Engine Parameters -->
+            <div class="p-4 border-b border-slate-800 space-y-4">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">ML Forecast Configuration</h3>
+                
+                <div>
+                    <label for="model-type-select" class="block text-xs font-medium text-slate-300 mb-1.5">Regression Algorithm</label>
+                    <select id="model-type-select" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono">
+                        <option value="linear" selected>Linear Regression (T+1 Standard)</option>
+                        <option value="xgboost">Gradient Boosting (XGB Proxy)</option>
+                        <option value="trend">Exponential Trend Proxy</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="lookback-days-select" class="block text-xs font-medium text-slate-300 mb-1.5">Lookback Window (Days)</label>
+                    <select id="lookback-days-select" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono">
+                        <option value="30">30 Days (Short-term)</option>
+                        <option value="90" selected>90 Days (Quarterly Standard)</option>
+                        <option value="180">180 Days (Semi-Annual)</option>
+                        <option value="365">365 Days (Full Year)</option>
+                    </select>
+                </div>
+
+                <button id="analyze-btn" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold tracking-wide transition shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2">
+                    <span id="btn-spinner" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin hidden"></span>
+                    <span id="btn-text">Execute T+1 Forecast Engine</span>
+                </button>
+            </div>
+
+            <!-- Custom Manual Input Fallback -->
+            <div class="p-4 flex-1 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Manual Asset Override</h3>
+                        <button id="add-btn" class="text-xs text-blue-400 hover:text-blue-300 font-medium">+ Add Symbol</button>
+                    </div>
+                    <div id="portfolio-list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        <!-- Dynamic Manual Rows Inserted Here -->
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-800/80">
+                    <span class="text-[10px] text-slate-500 block font-mono">STATELESS PIPELINE: Zero user data or API keys are stored on server disk.</span>
                 </div>
             </div>
         </aside>
 
-        <main class="main-content">
-            <div class="metrics-grid">
-                <div class="metric-card terminal-panel">
-                    <div class="metric-header">
-                        <span class="label">Total Current NAV</span>
-                    </div>
-                    <h3 id="tot-current">$0.00</h3>
-                    <span class="metric-subtext">Base Portfolio Valuation</span>
+        <!-- Main Content & Charts -->
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-y-auto p-4 space-y-4">
+            
+            <!-- Metric Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+                    <span class="text-xs font-medium text-slate-400">Total Current Portfolio NAV</span>
+                    <h3 id="tot-current" class="text-xl font-bold font-mono text-slate-100 mt-1">₹0.00</h3>
+                    <span class="text-[11px] text-slate-500 mt-2">Base Valuation</span>
                 </div>
 
-                <div class="metric-card terminal-panel highlight-blue">
-                    <div class="metric-header">
-                        <span class="label">Projected NAV (T+1)</span>
-                    </div>
-                    <h3 id="tot-predicted">$0.00</h3>
-                    <span class="metric-subtext">Machine Learning Forecast Target</span>
+                <div class="bg-slate-900 border border-blue-500/30 bg-blue-950/10 rounded-xl p-4 flex flex-col justify-between">
+                    <span class="text-xs font-medium text-blue-400">Projected Portfolio NAV (T+1)</span>
+                    <h3 id="tot-predicted" class="text-xl font-bold font-mono text-blue-400 mt-1">₹0.00</h3>
+                    <span class="text-[11px] text-slate-400 mt-2">ML Model Forecast Target</span>
                 </div>
 
-                <div class="metric-card terminal-panel">
-                    <div class="metric-header">
-                        <span class="label">Alpha / Expected Variance</span>
-                    </div>
-                    <h3 id="tot-change">0.00%</h3>
-                    <span class="metric-subtext">Projected Portfolio Return</span>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+                    <span class="text-xs font-medium text-slate-400">Alpha / Expected Variance</span>
+                    <h3 id="tot-change" class="text-xl font-bold font-mono text-slate-100 mt-1">0.00%</h3>
+                    <span class="text-[11px] text-slate-500 mt-2">Projected Portfolio Return</span>
                 </div>
 
-                <div class="metric-card terminal-panel">
-                    <div class="metric-header">
-                        <span class="label">Model Confidence</span>
-                    </div>
-                    <h3 id="avg-confidence">0.00%</h3>
-                    <span class="metric-subtext">Average Portfolio R² Rating</span>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+                    <span class="text-xs font-medium text-slate-400">Model Confidence (Avg R²)</span>
+                    <h3 id="avg-confidence" class="text-xl font-bold font-mono text-slate-100 mt-1">0.00%</h3>
+                    <span class="text-[11px] text-slate-500 mt-2">Statistical Fit Quality</span>
                 </div>
             </div>
 
-            <div class="workspace-tabs">
-                <div class="tab-group">
-                    <button class="workspace-tab active" id="btn-show-chart">Interactive Trajectory Chart</button>
-                    <button class="workspace-tab" id="btn-show-table">Positions Breakdown Table</button>
-                </div>
-                <div class="chart-legend">
-                    <span class="legend-item"><span class="color-box historical"></span> Historical (T-0)</span>
-                    <span class="legend-item"><span class="color-box forecast"></span> Predicted (T+1)</span>
-                </div>
-            </div>
-
-            <div class="viewport-container terminal-panel">
-                <div class="chart-container hidden" id="chart-section">
-                    <div class="chart-header">
-                        <div class="chart-title-group">
-                            <h3 id="chart-title">Select an asset to view price forecast</h3>
-                            <span class="subtitle-ticker">T+1 Trajectory Analysis</span>
-                        </div>
-
-                        <!-- Multi-Model Architecture Pill Bar -->
-                        <div class="model-selector-bar">
-                            <button class="model-pill active" data-model="current">Linear Baseline</button>
-                            <button class="model-pill" data-model="gradient">Gradient Boost (XGB)</button>
-                            <button class="model-pill" data-model="deep_learning">Deep Learning (LSTM)</button>
-                        </div>
-
-                        <span id="chart-accuracy" class="badge"></span>
+            <!-- Chart & Table Viewport -->
+            <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl flex flex-col min-h-[460px] overflow-hidden">
+                
+                <!-- Viewport Control Bar -->
+                <div class="h-12 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 bg-slate-900/80">
+                    <div class="flex items-center gap-2">
+                        <button id="btn-show-chart" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-white border border-slate-700 transition">Trajectory Chart</button>
+                        <button id="btn-show-table" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition">Positions Breakdown</button>
                     </div>
-                    <div id="tv-chart" class="tv-chart" style="position: relative; height: 410px; width: 100%;"></div>
-                </div>
 
-                <div class="table-container hidden" id="results-section">
-                    <div class="table-header">
-                        <h3>Positions & Model Metrics</h3>
-                        <span class="table-badge">Real-Time Payload</span>
-                    </div>
-                    <div class="table-wrapper">
-                        <table class="results-table">
-                            <thead>
-                                <tr>
-                                    <th>Symbol</th>
-                                    <th>Position Size</th>
-                                    <th>Market Price</th>
-                                    <th>Predicted (T+1)</th>
-                                    <th>Expected Δ</th>
-                                    <th>Confidence (R²)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="results-body"></tbody>
-                        </table>
+                    <div class="flex items-center gap-4 text-xs font-mono">
+                        <span class="flex items-center gap-1.5 text-slate-400">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Historical Close
+                        </span>
+                        <span class="flex items-center gap-1.5 text-slate-400">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Forecast Target
+                        </span>
                     </div>
                 </div>
-            </div>
 
-            <div class="stress-test-bar terminal-panel">
-                <div class="stress-header">
-                    <div class="stress-title">
+                <!-- Chart View -->
+                <div id="chart-section" class="flex-1 p-4 flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
                         <div>
-                            <h4>Interactive "What-If" Allocation Stress Test</h4>
-                            <span class="stress-sub">Simulate weight adjustments to recalculate projected portfolio variance in real time</span>
+                            <h3 id="chart-title" class="text-sm font-semibold text-slate-200">Select a holding to inspect price trajectory</h3>
+                            <span class="text-xs text-slate-500">Daily Close vs Machine Learning Prediction</span>
                         </div>
+                        <span id="chart-accuracy" class="text-xs font-mono px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">R²: --</span>
                     </div>
+
+                    <div id="tv-chart" class="flex-1 w-full min-h-[340px] relative rounded-lg overflow-hidden"></div>
                 </div>
-                <div class="stress-controls">
-                    <div class="slider-group">
-                        <label for="weight-slider">Portfolio Reallocation Target Delta:</label>
-                        <input type="range" id="weight-slider" min="-20" max="20" value="0" step="1" class="sensibull-slider">
-                        <span id="slider-value" class="slider-badge">0% Shift</span>
-                    </div>
-                    <button id="simulate-btn" class="btn secondary-sm">Re-calculate Scenario</button>
+
+                <!-- Table View -->
+                <div id="results-section" class="flex-1 p-4 overflow-y-auto hidden">
+                    <table class="w-full text-left border-collapse text-xs font-mono">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
+                                <th class="pb-2">Symbol</th>
+                                <th class="pb-2">Shares</th>
+                                <th class="pb-2">Market Price</th>
+                                <th class="pb-2">Predicted (T+1)</th>
+                                <th class="pb-2">Expected Δ</th>
+                                <th class="pb-2">Confidence (R²)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body" class="divide-y divide-slate-800/60 text-slate-200">
+                            <tr>
+                                <td colspan="6" class="py-8 text-center text-slate-500">No portfolio data synchronized. Authenticate broker or execute forecast.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- What-If Stress Testing Tool -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h4 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Portfolio Scenario Stress Test</h4>
+                    <p class="text-xs text-slate-400">Adjust target reallocation delta to simulate immediate portfolio NAV shift.</p>
+                </div>
+
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <input type="range" id="weight-slider" min="-20" max="20" value="0" step="1" class="w-48 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                    <span id="slider-value" class="text-xs font-mono font-semibold text-blue-400 bg-blue-950/50 border border-blue-800/50 px-2.5 py-1 rounded">0% Shift</span>
+                    <button id="simulate-btn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 transition">Re-calculate Scenario</button>
                 </div>
             </div>
         </main>
     </div>
 
-    <footer class="warning-footer">
-        <div class="marquee">
-            <span class="disclaimer-badge">NOTICE</span> <strong>INSTITUTIONAL DISCLAIMER:</strong> ProFolio Analytics utilizes time-series data and machine learning regression algorithms to generate mathematical forecasts for educational and research purposes only. Projections do not constitute financial advice. Market assets carry inherent risk.
+    <!-- Warning / Disclaimer Footer -->
+    <footer class="h-8 border-t border-slate-800 bg-slate-950 px-4 flex items-center justify-between text-[11px] text-slate-400 shrink-0 font-mono">
+        <div class="truncate">
+            <span class="text-amber-400 font-semibold">SEBI COMPLIANCE DISCLAIMER:</span> Quantitative predictions are generated purely for research and analytical demonstration. They do not constitute financial advice or market guarantees.
+        </div>
+        <div class="hidden sm:block text-slate-400">
+            v1.0.0 | Stateless Quantitative Terminal
         </div>
     </footer>
 
+    <!-- Frontend Script -->
     <script src="script.js"></script>
 </body>
 </html>
