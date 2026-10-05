@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modelTypeSelect = document.getElementById('model-type-select');
     const lookbackDaysSelect = document.getElementById('lookback-days-select');
     const analyzeBtn = document.getElementById('analyze-btn');
+    const manualAnalyzeBtn = document.getElementById('manual-analyze-btn');
     const btnSpinner = document.getElementById('btn-spinner');
     const btnText = document.getElementById('btn-text');
 
@@ -28,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const simulateBtn = document.getElementById('simulate-btn');
 
     // 3. Application State Variables
-    let activeBroker = 'upstox';
     let lastSummaryData = null;
     let globalPortfolioData = [];
     let chart = null;
@@ -38,13 +38,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Currency Formatter
     const formatINR = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val || 0);
 
+    // --- Helper: Extract Manual Holdings ---
+    function getManualInputs() {
+        if (!portfolioList) return [];
+        return Array.from(portfolioList.querySelectorAll('.portfolio-row')).map(row => ({
+            symbol: row.querySelector('.sym-input').value.trim().toUpperCase(),
+            shares: parseFloat(row.querySelector('.share-input').value) || 1
+        })).filter(item => item.symbol !== '');
+    }
+
     // --- OAuth Callback Handler ---
     async function handleOAuthCallback() {
         const urlParams = new URLSearchParams(window.location.search);
         const authCode = urlParams.get('code');
 
         if (authCode) {
-            btnText.innerText = "Exchanging Upstox Token...";
+            if (btnText) btnText.innerText = "Exchanging Upstox Token...";
             if (btnSpinner) btnSpinner.classList.remove('hidden');
 
             try {
@@ -60,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 alert(`OAuth Error: ${err.message}`);
             } finally {
-                btnText.innerText = "Execute T+1 Forecast Engine";
+                if (btnText) btnText.innerText = "Execute T+1 Forecast Engine";
                 if (btnSpinner) btnSpinner.classList.add('hidden');
             }
         }
@@ -137,9 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function addStockRow(symbol = '', shares = '') {
         if (!portfolioList) return;
         const row = document.createElement('div');
-        row.className = 'flex items-center gap-2';
+        row.className = 'portfolio-row flex items-center gap-2';
         row.innerHTML = `
-            <input type="text" placeholder="RELIANCE.NS" value="${symbol}" class="sym-input w-2/3 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500">
+            <input type="text" placeholder="RELIANCE.NS" value="${symbol}" class="sym-input w-2/3 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500 uppercase">
             <input type="number" placeholder="Qty" value="${shares}" class="share-input w-1/3 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500">
             <button class="remove-btn text-slate-500 hover:text-red-400 text-xs px-1">✖</button>
         `;
@@ -192,100 +201,111 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Execute ML Sync & Prediction Engine ---
-    if (analyzeBtn) {
-        analyzeBtn.addEventListener('click', async () => {
-            let token = upstoxTokenInput ? upstoxTokenInput.value.trim() : '';
-            const lookbackDays = parseInt(lookbackDaysSelect ? lookbackDaysSelect.value : 90, 10);
+    // --- Core Execution: Manual Portfolio Engine ---
+    async function runManualEngine() {
+        const manualInputs = getManualInputs();
+        const lookbackDays = parseInt(lookbackDaysSelect ? lookbackDaysSelect.value : 90, 10);
 
-            // Extract manual holdings inputs
-            const manualInputs = Array.from(portfolioList ? portfolioList.querySelectorAll('.flex') : []).map(row => ({
-                symbol: row.querySelector('.sym-input').value.trim(),
-                shares: parseFloat(row.querySelector('.share-input').value) || 1
-            })).filter(item => item.symbol !== '');
+        if (manualInputs.length === 0) {
+            alert("Please add at least one stock symbol in Manual Override.");
+            return;
+        }
 
-            // Fallback: If no broker token is provided, analyze all stocks added in Manual Override
-            if (!token) {
-                if (manualInputs.length === 0) {
-                    alert("Please connect Upstox or add at least one stock symbol in Manual Override.");
-                    return;
-                }
+        if (btnText) btnText.innerText = "Running Manual Portfolio Engine...";
+        if (btnSpinner) btnSpinner.classList.remove('hidden');
+        if (manualAnalyzeBtn) manualAnalyzeBtn.disabled = true;
+        if (analyzeBtn) analyzeBtn.disabled = true;
 
-                btnText.innerText = "Running Manual Portfolio Engine...";
-                if (btnSpinner) btnSpinner.classList.remove('hidden');
-                analyzeBtn.disabled = true;
-
-                try {
-                    const results = [];
-                    let totCurrent = 0;
-                    let totPredicted = 0;
-                    let totalAccuracyAcc = 0;
-                    let validCount = 0;
-
-                    // Fetch predictions in parallel for all manual stock allocations
-                    const fetchPromises = manualInputs.map(item =>
-                        fetch(`${API_BASE_URL}/api/v1/predict-stock`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                symbol: item.symbol,
-                                shares: item.shares,
-                                lookback_days: lookbackDays
-                            })
-                        }).then(res => res.json())
-                    );
-
-                    const responses = await Promise.all(fetchPromises);
-
-                    responses.forEach((resData) => {
-                        if (resData.data && !resData.data.error) {
-                            const stockData = resData.data;
-                            results.push(stockData);
-                            
-                            const curVal = (stockData.current_price || 0) * stockData.shares;
-                            const predVal = (stockData.predicted_price || 0) * stockData.shares;
-                            
-                            totCurrent += curVal;
-                            totPredicted += predVal;
-                            totalAccuracyAcc += (stockData.accuracy || 0);
-                            validCount++;
-                        } else if (resData.detail) {
-                            results.push({ symbol: 'Unknown', error: resData.detail });
-                        }
-                    });
-
-                    if (validCount === 0) {
-                        alert("Could not fetch data for any specified manual tickers. Ensure symbols include suffixes (e.g., RELIANCE.NS).");
-                        return;
+        try {
+            const fetchPromises = manualInputs.map(item =>
+                fetch(`${API_BASE_URL}/api/v1/predict-stock`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol: item.symbol,
+                        shares: item.shares,
+                        lookback_days: lookbackDays
+                    })
+                })
+                .then(async res => {
+                    if (!res.ok) {
+                        const errBody = await res.json().catch(() => ({}));
+                        return { data: { symbol: item.symbol, error: errBody.detail || `HTTP ${res.status}` } };
                     }
+                    return res.json();
+                })
+                .catch(err => ({ data: { symbol: item.symbol, error: err.message } }))
+            );
 
-                    const pctChange = totCurrent > 0 ? ((totPredicted - totCurrent) / totCurrent) * 100 : 0;
-                    const avgAcc = validCount > 0 ? totalAccuracyAcc / validCount : 0;
+            const responses = await Promise.all(fetchPromises);
+            const results = [];
+            let totCurrent = 0;
+            let totPredicted = 0;
+            let totalAccuracyAcc = 0;
+            let validCount = 0;
 
-                    globalPortfolioData = results;
-                    lastSummaryData = {
-                        total_current_value: totCurrent,
-                        total_predicted_value: totPredicted,
-                        portfolio_percentage_change: pctChange,
-                        avg_accuracy: avgAcc
-                    };
-
-                    displayResults({ portfolio_summary: lastSummaryData, individual_results: globalPortfolioData });
-                    
-                    const firstValid = globalPortfolioData.find(item => !item.error);
-                    if (firstValid) renderChart(firstValid);
-
-                } catch (err) {
-                    alert(`Manual Prediction Failure: ${err.message}`);
-                } finally {
-                    btnText.innerText = "Execute T+1 Forecast Engine";
-                    if (btnSpinner) btnSpinner.classList.add('hidden');
-                    analyzeBtn.disabled = false;
+            responses.forEach((resData) => {
+                const stockData = resData.data || resData;
+                if (stockData && !stockData.error) {
+                    results.push(stockData);
+                    const curVal = (stockData.current_price || 0) * stockData.shares;
+                    const predVal = (stockData.predicted_price || 0) * stockData.shares;
+                    totCurrent += curVal;
+                    totPredicted += predVal;
+                    totalAccuracyAcc += (stockData.accuracy || 0);
+                    validCount++;
+                } else {
+                    results.push({ symbol: stockData.symbol || 'Unknown', error: stockData.error || 'Failed to resolve' });
                 }
+            });
+
+            if (validCount === 0) {
+                alert("Could not fetch data for specified manual tickers. Ensure symbols include suffixes (e.g., RELIANCE.NS).");
                 return;
             }
 
-            // Broker Sync Execution (Upstox)
+            const pctChange = totCurrent > 0 ? ((totPredicted - totCurrent) / totCurrent) * 100 : 0;
+            const avgAcc = validCount > 0 ? totalAccuracyAcc / validCount : 0;
+
+            globalPortfolioData = results;
+            lastSummaryData = {
+                total_current_value: totCurrent,
+                total_predicted_value: totPredicted,
+                portfolio_percentage_change: pctChange,
+                avg_accuracy: avgAcc
+            };
+
+            displayResults({ portfolio_summary: lastSummaryData, individual_results: globalPortfolioData });
+            
+            const firstValid = globalPortfolioData.find(item => !item.error);
+            if (firstValid) renderChart(firstValid);
+
+        } catch (err) {
+            alert(`Manual Prediction Failure: ${err.message}`);
+        } finally {
+            if (btnText) btnText.innerText = "Execute T+1 Forecast Engine";
+            if (btnSpinner) btnSpinner.classList.add('hidden');
+            if (manualAnalyzeBtn) manualAnalyzeBtn.disabled = false;
+            if (analyzeBtn) analyzeBtn.disabled = false;
+        }
+    }
+
+    if (manualAnalyzeBtn) {
+        manualAnalyzeBtn.addEventListener('click', runManualEngine);
+    }
+
+    // --- Core Execution: Upstox OAuth Engine ---
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', async () => {
+            const token = upstoxTokenInput ? upstoxTokenInput.value.trim() : '';
+            const lookbackDays = parseInt(lookbackDaysSelect ? lookbackDaysSelect.value : 90, 10);
+
+            // Fallback to manual execution if no token is provided
+            if (!token) {
+                await runManualEngine();
+                return;
+            }
+
             const payload = {
                 broker: 'upstox',
                 access_token: token,
@@ -293,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 lookback_days: lookbackDays
             };
 
-            btnText.innerText = "Syncing Upstox & Executing Analytics...";
+            if (btnText) btnText.innerText = "Syncing Upstox & Executing Analytics...";
             if (btnSpinner) btnSpinner.classList.remove('hidden');
             analyzeBtn.disabled = true;
 
@@ -305,8 +325,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.detail || "Server pipeline error");
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || `Server returned status ${response.status}`);
                 }
 
                 const resData = await response.json();
@@ -328,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 alert(`Analysis Failure: ${error.message}`);
             } finally {
-                btnText.innerText = "Execute T+1 Forecast Engine";
+                if (btnText) btnText.innerText = "Execute T+1 Forecast Engine";
                 if (btnSpinner) btnSpinner.classList.add('hidden');
                 analyzeBtn.disabled = false;
             }
@@ -433,8 +453,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (simulateBtn) {
         simulateBtn.addEventListener('click', () => {
-            if (!lastSummaryData) {
-                alert("Please execute a forecast first.");
+            if (!lastSummaryData || lastSummaryData.total_current_value === 0) {
+                alert("Please execute a valid forecast with active portfolio results first.");
                 return;
             }
 
