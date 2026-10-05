@@ -51,15 +51,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (authCode) {
             btnText.innerText = "Exchanging Upstox Token...";
-            btnSpinner.classList.remove('hidden');
+            if (btnSpinner) btnSpinner.classList.remove('hidden');
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/upstox/callback?code=${encodeURIComponent(authCode)}`);
+                // Corrected endpoint path to match FastAPI backend route
+                const response = await fetch(`${API_BASE_URL}/api/v1/auth/upstox/callback?code=${encodeURIComponent(authCode)}`);
                 if (!response.ok) throw new Error("Failed to exchange Upstox authorization code.");
                 
                 const data = await response.json();
                 if (data.access_token) {
-                    upstoxTokenInput.value = data.access_token;
+                    if (upstoxTokenInput) upstoxTokenInput.value = data.access_token;
                     window.history.replaceState({}, document.title, window.location.pathname);
                     alert("Upstox OAuth login successful! Click 'Execute T+1 Forecast Engine' to run analytics.");
                 }
@@ -67,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(`OAuth Error: ${err.message}`);
             } finally {
                 btnText.innerText = "Execute T+1 Forecast Engine";
-                btnSpinner.classList.add('hidden');
+                if (btnSpinner) btnSpinner.classList.add('hidden');
             }
         }
     }
@@ -78,11 +79,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (upstoxLoginBtn) {
         upstoxLoginBtn.addEventListener('click', async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/upstox/login`);
-                if (!response.ok) throw new Error("Could not retrieve Upstox OAuth URL.");
+                // Corrected endpoint path to match FastAPI backend route
+                const response = await fetch(`${API_BASE_URL}/api/v1/auth/upstox/login`);
+                if (!response.ok) throw new Error(`Could not retrieve Upstox OAuth URL (Status: ${response.status})`);
                 const data = await response.json();
-                if (data.authorization_url) {
-                    window.location.href = data.authorization_url;
+                
+                const authUrl = data.authorization_url || data.url;
+                if (authUrl) {
+                    window.location.href = authUrl;
+                } else {
+                    throw new Error("No authorization URL received from server.");
                 }
             } catch (err) {
                 alert(`Login Redirect Error: ${err.message}`);
@@ -96,23 +102,23 @@ document.addEventListener('DOMContentLoaded', () => {
             activeBroker = 'upstox';
             btnUpstoxTab.className = "broker-tab py-1.5 rounded-md bg-blue-600 text-white transition text-center font-semibold";
             btnDhanTab.className = "broker-tab py-1.5 rounded-md text-slate-400 hover:text-white transition text-center";
-            upstoxPanel.classList.remove('hidden');
-            dhanPanel.classList.add('hidden');
+            if (upstoxPanel) upstoxPanel.classList.remove('hidden');
+            if (dhanPanel) dhanPanel.classList.add('hidden');
         });
 
         btnDhanTab.addEventListener('click', () => {
             activeBroker = 'dhan';
             btnDhanTab.className = "broker-tab py-1.5 rounded-md bg-blue-600 text-white transition text-center font-semibold";
             btnUpstoxTab.className = "broker-tab py-1.5 rounded-md text-slate-400 hover:text-white transition text-center";
-            dhanPanel.classList.remove('hidden');
-            upstoxPanel.classList.add('hidden');
+            if (dhanPanel) dhanPanel.classList.remove('hidden');
+            if (upstoxPanel) upstoxPanel.classList.add('hidden');
         });
     }
 
     // --- TradingView Lightweight Charts Setup ---
     function initChart() {
         const chartContainer = document.getElementById('tv-chart');
-        if (!chartContainer) return;
+        if (!chartContainer || typeof LightweightCharts === 'undefined') return;
 
         chartContainer.innerHTML = ''; // Clear prior canvas
 
@@ -156,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Manual Asset Override Helper ---
     function addStockRow(symbol = '', shares = '') {
+        if (!portfolioList) return;
         const row = document.createElement('div');
         row.className = 'flex items-center gap-2';
         row.innerHTML = `
@@ -174,172 +181,180 @@ document.addEventListener('DOMContentLoaded', () => {
     addStockRow('TCS.NS', '5');
 
     // --- Navigation & Workspace Controls ---
-    btnShowChart.addEventListener('click', () => {
-        btnShowChart.classList.add('bg-slate-800', 'text-white', 'border', 'border-slate-700');
-        btnShowChart.classList.remove('text-slate-400');
-        btnShowTable.classList.remove('bg-slate-800', 'text-white', 'border', 'border-slate-700');
-        btnShowTable.classList.add('text-slate-400');
-        chartSection.classList.remove('hidden');
-        resultsSection.classList.add('hidden');
-        
-        setTimeout(() => {
-            const chartContainer = document.getElementById('tv-chart');
-            if (chartContainer && chart) {
-                chart.applyOptions({ width: chartContainer.clientWidth });
-                chart.timeScale().fitContent();
-            }
-        }, 50);
-    });
+    if (btnShowChart && btnShowTable) {
+        btnShowChart.addEventListener('click', () => {
+            btnShowChart.classList.add('bg-slate-800', 'text-white', 'border', 'border-slate-700');
+            btnShowChart.classList.remove('text-slate-400');
+            btnShowTable.classList.remove('bg-slate-800', 'text-white', 'border', 'border-slate-700');
+            btnShowTable.classList.add('text-slate-400');
+            if (chartSection) chartSection.classList.remove('hidden');
+            if (resultsSection) resultsSection.classList.add('hidden');
+            
+            setTimeout(() => {
+                const chartContainer = document.getElementById('tv-chart');
+                if (chartContainer && chart) {
+                    chart.applyOptions({ width: chartContainer.clientWidth });
+                    chart.timeScale().fitContent();
+                }
+            }, 50);
+        });
 
-    btnShowTable.addEventListener('click', () => {
-        btnShowTable.classList.add('bg-slate-800', 'text-white', 'border', 'border-slate-700');
-        btnShowTable.classList.remove('text-slate-400');
-        btnShowChart.classList.remove('bg-slate-800', 'text-white', 'border', 'border-slate-700');
-        btnShowChart.classList.add('text-slate-400');
-        resultsSection.classList.remove('hidden');
-        chartSection.classList.add('hidden');
-    });
+        btnShowTable.addEventListener('click', () => {
+            btnShowTable.classList.add('bg-slate-800', 'text-white', 'border', 'border-slate-700');
+            btnShowTable.classList.remove('text-slate-400');
+            btnShowChart.classList.remove('bg-slate-800', 'text-white', 'border', 'border-slate-700');
+            btnShowChart.classList.add('text-slate-400');
+            if (resultsSection) resultsSection.classList.remove('hidden');
+            if (chartSection) chartSection.classList.add('hidden');
+        });
+    }
 
     if (resetLayoutBtn) {
         resetLayoutBtn.addEventListener('click', () => {
-            portfolioList.innerHTML = '';
+            if (portfolioList) portfolioList.innerHTML = '';
             addStockRow('RELIANCE.NS', '10');
             addStockRow('TCS.NS', '5');
-            weightSlider.value = 0;
-            sliderValue.innerText = '0% Shift';
+            if (weightSlider) weightSlider.value = 0;
+            if (sliderValue) sliderValue.innerText = '0% Shift';
         });
     }
 
     // --- Execute ML Sync & Prediction Engine ---
-    analyzeBtn.addEventListener('click', async () => {
-        let token = '';
-        let clientId = null;
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', async () => {
+            let token = '';
+            let clientId = null;
 
-        if (activeBroker === 'upstox') {
-            token = upstoxTokenInput.value.trim();
-        } else if (activeBroker === 'dhan') {
-            clientId = dhanClientIdInput.value.trim();
-            token = dhanTokenInput.value.trim();
-        }
+            if (activeBroker === 'upstox' && upstoxTokenInput) {
+                token = upstoxTokenInput.value.trim();
+            } else if (activeBroker === 'dhan') {
+                if (dhanClientIdInput) clientId = dhanClientIdInput.value.trim();
+                if (dhanTokenInput) token = dhanTokenInput.value.trim();
+            }
 
-        // If no broker credentials entered, run single-stock prediction fallback using manual inputs
-        if (!token) {
-            const manualInputs = Array.from(portfolioList.querySelectorAll('.flex')).map(row => ({
-                symbol: row.querySelector('.sym-input').value.trim(),
-                shares: parseFloat(row.querySelector('.share-input').value) || 1
-            })).filter(item => item.symbol !== '');
+            // If no broker credentials entered, run single-stock prediction fallback using manual inputs
+            if (!token) {
+                const manualInputs = Array.from(portfolioList ? portfolioList.querySelectorAll('.flex') : []).map(row => ({
+                    symbol: row.querySelector('.sym-input').value.trim(),
+                    shares: parseFloat(row.querySelector('.share-input').value) || 1
+                })).filter(item => item.symbol !== '');
 
-            if (manualInputs.length === 0) {
-                alert("Please connect a broker or add at least one stock symbol in Manual Override.");
+                if (manualInputs.length === 0) {
+                    alert("Please connect a broker or add at least one stock symbol in Manual Override.");
+                    return;
+                }
+
+                btnText.innerText = "Running Single-Stock ML Engine...";
+                if (btnSpinner) btnSpinner.classList.remove('hidden');
+                analyzeBtn.disabled = true;
+
+                try {
+                    const target = manualInputs[0];
+                    const response = await fetch(`${API_BASE_URL}/api/v1/predict-stock`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            symbol: target.symbol,
+                            shares: target.shares,
+                            lookback_days: parseInt(lookbackDaysSelect ? lookbackDaysSelect.value : 90, 10)
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.detail || "Single stock prediction error");
+                    }
+
+                    const resData = await response.json();
+                    const item = resData.data;
+
+                    globalPortfolioData = [item];
+                    lastSummaryData = {
+                        total_current_value: item.current_price * item.shares,
+                        total_predicted_value: item.predicted_price * item.shares,
+                        portfolio_percentage_change: item.percentage_change,
+                        avg_accuracy: item.accuracy
+                    };
+
+                    displayResults({ portfolio_summary: lastSummaryData, individual_results: globalPortfolioData });
+                    renderChart(item);
+
+                } catch (err) {
+                    alert(`Manual Prediction Failure: ${err.message}`);
+                } finally {
+                    btnText.innerText = "Execute T+1 Forecast Engine";
+                    if (btnSpinner) btnSpinner.classList.add('hidden');
+                    analyzeBtn.disabled = false;
+                }
                 return;
             }
 
-            btnText.innerText = "Running Single-Stock ML Engine...";
-            btnSpinner.classList.remove('hidden');
+            // Broker Sync Execution
+            const payload = {
+                broker: activeBroker,
+                access_token: token,
+                client_id: clientId,
+                model_type: modelTypeSelect ? modelTypeSelect.value : 'linear',
+                lookback_days: parseInt(lookbackDaysSelect ? lookbackDaysSelect.value : 90, 10)
+            };
+
+            btnText.innerText = "Syncing Broker & Executing Analytics...";
+            if (btnSpinner) btnSpinner.classList.remove('hidden');
             analyzeBtn.disabled = true;
 
             try {
-                const target = manualInputs[0];
-                const response = await fetch(`${API_BASE_URL}/api/predict-stock`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/sync-and-analyze`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        symbol: target.symbol,
-                        shares: target.shares,
-                        lookback_days: parseInt(lookbackDaysSelect.value, 10)
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
                     const errData = await response.json();
-                    throw new Error(errData.detail || "Single stock prediction error");
+                    throw new Error(errData.detail || "Server pipeline error");
                 }
 
                 const resData = await response.json();
-                const item = resData.data;
+                const analyticsData = resData.data;
 
-                globalPortfolioData = [item];
-                lastSummaryData = {
-                    total_current_value: item.current_price * item.shares,
-                    total_predicted_value: item.predicted_price * item.shares,
-                    portfolio_percentage_change: item.percentage_change,
-                    avg_accuracy: item.accuracy
-                };
+                if (!analyticsData || !analyticsData.individual_results) {
+                    alert("No holdings found or analysis returned empty payload.");
+                    return;
+                }
 
-                displayResults({ portfolio_summary: lastSummaryData, individual_results: globalPortfolioData });
-                renderChart(item);
+                globalPortfolioData = analyticsData.individual_results;
+                lastSummaryData = analyticsData.portfolio_summary;
 
-            } catch (err) {
-                alert(`Manual Prediction Failure: ${err.message}`);
+                displayResults(analyticsData);
+
+                const firstValid = globalPortfolioData.find(item => !item.error);
+                if (firstValid) renderChart(firstValid);
+
+            } catch (error) {
+                alert(`Analysis Failure: ${error.message}`);
             } finally {
                 btnText.innerText = "Execute T+1 Forecast Engine";
-                btnSpinner.classList.add('hidden');
+                if (btnSpinner) btnSpinner.classList.add('hidden');
                 analyzeBtn.disabled = false;
             }
-            return;
-        }
-
-        // Broker Sync Execution
-        const payload = {
-            broker: activeBroker,
-            access_token: token,
-            client_id: clientId,
-            model_type: modelTypeSelect.value,
-            lookback_days: parseInt(lookbackDaysSelect.value, 10)
-        };
-
-        btnText.innerText = "Syncing Broker & Executing Analytics...";
-        btnSpinner.classList.remove('hidden');
-        analyzeBtn.disabled = true;
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/sync-and-analyze`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.detail || "Server pipeline error");
-            }
-
-            const resData = await response.json();
-            const analyticsData = resData.data;
-
-            if (!analyticsData || !analyticsData.individual_results) {
-                alert("No holdings found or analysis returned empty payload.");
-                return;
-            }
-
-            globalPortfolioData = analyticsData.individual_results;
-            lastSummaryData = analyticsData.portfolio_summary;
-
-            displayResults(analyticsData);
-
-            const firstValid = globalPortfolioData.find(item => !item.error);
-            if (firstValid) renderChart(firstValid);
-
-        } catch (error) {
-            alert(`Analysis Failure: ${error.message}`);
-        } finally {
-            btnText.innerText = "Execute T+1 Forecast Engine";
-            btnSpinner.classList.add('hidden');
-            analyzeBtn.disabled = false;
-        }
-    });
+        });
+    }
 
     // --- Render Metric Cards & Positions Table ---
     function displayResults(analyticsData) {
         const summary = analyticsData.portfolio_summary || {};
         
-        document.getElementById('tot-current').innerText = formatINR(summary.total_current_value || 0);
-        document.getElementById('tot-predicted').innerText = formatINR(summary.total_predicted_value || 0);
+        const totCurrentEl = document.getElementById('tot-current');
+        const totPredictedEl = document.getElementById('tot-predicted');
+        if (totCurrentEl) totCurrentEl.innerText = formatINR(summary.total_current_value || 0);
+        if (totPredictedEl) totPredictedEl.innerText = formatINR(summary.total_predicted_value || 0);
 
         const pctEl = document.getElementById('tot-change');
-        const pctVal = summary.portfolio_percentage_change || 0;
-        pctEl.innerText = `${pctVal >= 0 ? '+' : ''}${pctVal.toFixed(2)}%`;
-        pctEl.className = `text-xl font-bold font-mono mt-1 ${pctVal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+        if (pctEl) {
+            const pctVal = summary.portfolio_percentage_change || 0;
+            pctEl.innerText = `${pctVal >= 0 ? '+' : ''}${pctVal.toFixed(2)}%`;
+            pctEl.className = `text-xl font-bold font-mono mt-1 ${pctVal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+        }
 
         const avgConfidenceEl = document.getElementById('avg-confidence');
         if (avgConfidenceEl) {
@@ -347,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const tbody = document.getElementById('results-body');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
         analyticsData.individual_results.forEach(item => {
@@ -373,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 tr.addEventListener('click', () => {
                     renderChart(item);
-                    btnShowChart.click();
+                    if (btnShowChart) btnShowChart.click();
                 });
             }
             tbody.appendChild(tr);
@@ -382,10 +398,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Render Stock Price Trajectory Chart ---
     function renderChart(itemData) {
-        document.getElementById('chart-title').innerText = `${itemData.symbol} Target Trajectory`;
-        document.getElementById('chart-accuracy').innerText = `R² Confidence: ${(itemData.accuracy || 0).toFixed(1)}%`;
+        const chartTitle = document.getElementById('chart-title');
+        const chartAccuracy = document.getElementById('chart-accuracy');
+        if (chartTitle) chartTitle.innerText = `${itemData.symbol} Target Trajectory`;
+        if (chartAccuracy) chartAccuracy.innerText = `R² Confidence: ${(itemData.accuracy || 0).toFixed(1)}%`;
 
-        if (!itemData.history || itemData.history.length === 0) return;
+        if (!itemData.history || itemData.history.length === 0 || !lineSeries || !predictedSeries) return;
 
         lineSeries.setData(itemData.history);
         const lastHistorical = itemData.history[itemData.history.length - 1];
@@ -414,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (weightSlider) {
         weightSlider.addEventListener('input', (e) => {
             const shiftVal = parseInt(e.target.value, 10);
-            sliderValue.innerText = `${shiftVal > 0 ? '+' : ''}${shiftVal}% Shift`;
+            if (sliderValue) sliderValue.innerText = `${shiftVal > 0 ? '+' : ''}${shiftVal}% Shift`;
         });
     }
 
@@ -425,16 +443,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const shiftPercent = parseFloat(weightSlider.value) / 100;
+            const shiftPercent = parseFloat(weightSlider ? weightSlider.value : 0) / 100;
             const basePredicted = lastSummaryData.total_predicted_value;
             const simulatedPredicted = basePredicted * (1 + shiftPercent);
             const baseCurrent = lastSummaryData.total_current_value;
             const simulatedPctChange = baseCurrent > 0 ? ((simulatedPredicted - baseCurrent) / baseCurrent) * 100 : 0;
 
-            document.getElementById('tot-predicted').innerText = formatINR(simulatedPredicted);
+            const totPredictedEl = document.getElementById('tot-predicted');
+            if (totPredictedEl) totPredictedEl.innerText = formatINR(simulatedPredicted);
+            
             const pctEl = document.getElementById('tot-change');
-            pctEl.innerText = `${simulatedPctChange >= 0 ? '+' : ''}${simulatedPctChange.toFixed(2)}%`;
-            pctEl.className = `text-xl font-bold font-mono mt-1 ${simulatedPctChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            if (pctEl) {
+                pctEl.innerText = `${simulatedPctChange >= 0 ? '+' : ''}${simulatedPctChange.toFixed(2)}%`;
+                pctEl.className = `text-xl font-bold font-mono mt-1 ${simulatedPctChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+            }
         });
     }
 });
