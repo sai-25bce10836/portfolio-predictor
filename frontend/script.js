@@ -5,14 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
         : 'https://portfolio-predictor-s6me.onrender.com';
 
     // 2. DOM Element References
-    const btnUpstoxTab = document.getElementById('btn-upstox-tab');
-    const btnDhanTab = document.getElementById('btn-dhan-tab');
-    const upstoxPanel = document.getElementById('upstox-panel');
-    const dhanPanel = document.getElementById('dhan-panel');
     const upstoxLoginBtn = document.getElementById('upstox-login-btn');
     const upstoxTokenInput = document.getElementById('upstox-token-input');
-    const dhanClientIdInput = document.getElementById('dhan-client-id');
-    const dhanTokenInput = document.getElementById('dhan-token-input');
 
     const modelTypeSelect = document.getElementById('model-type-select');
     const lookbackDaysSelect = document.getElementById('lookback-days-select');
@@ -34,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const simulateBtn = document.getElementById('simulate-btn');
 
     // 3. Application State Variables
-    let activeBroker = 'upstox'; // 'upstox' or 'dhan'
+    let activeBroker = 'upstox';
     let lastSummaryData = null;
     let globalPortfolioData = [];
     let chart = null;
@@ -54,7 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnSpinner) btnSpinner.classList.remove('hidden');
 
             try {
-                // Corrected endpoint path to match FastAPI backend route
                 const response = await fetch(`${API_BASE_URL}/api/v1/auth/upstox/callback?code=${encodeURIComponent(authCode)}`);
                 if (!response.ok) throw new Error("Failed to exchange Upstox authorization code.");
                 
@@ -79,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (upstoxLoginBtn) {
         upstoxLoginBtn.addEventListener('click', async () => {
             try {
-                // Corrected endpoint path to match FastAPI backend route
                 const response = await fetch(`${API_BASE_URL}/api/v1/auth/upstox/login`);
                 if (!response.ok) throw new Error(`Could not retrieve Upstox OAuth URL (Status: ${response.status})`);
                 const data = await response.json();
@@ -93,25 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 alert(`Login Redirect Error: ${err.message}`);
             }
-        });
-    }
-
-    // --- Broker Tab Switching ---
-    if (btnUpstoxTab && btnDhanTab) {
-        btnUpstoxTab.addEventListener('click', () => {
-            activeBroker = 'upstox';
-            btnUpstoxTab.className = "broker-tab py-1.5 rounded-md bg-blue-600 text-white transition text-center font-semibold";
-            btnDhanTab.className = "broker-tab py-1.5 rounded-md text-slate-400 hover:text-white transition text-center";
-            if (upstoxPanel) upstoxPanel.classList.remove('hidden');
-            if (dhanPanel) dhanPanel.classList.add('hidden');
-        });
-
-        btnDhanTab.addEventListener('click', () => {
-            activeBroker = 'dhan';
-            btnDhanTab.className = "broker-tab py-1.5 rounded-md bg-blue-600 text-white transition text-center font-semibold";
-            btnUpstoxTab.className = "broker-tab py-1.5 rounded-md text-slate-400 hover:text-white transition text-center";
-            if (dhanPanel) dhanPanel.classList.remove('hidden');
-            if (upstoxPanel) upstoxPanel.classList.add('hidden');
         });
     }
 
@@ -222,15 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Execute ML Sync & Prediction Engine ---
     if (analyzeBtn) {
         analyzeBtn.addEventListener('click', async () => {
-            let token = '';
-            let clientId = null;
-
-            if (activeBroker === 'upstox' && upstoxTokenInput) {
-                token = upstoxTokenInput.value.trim();
-            } else if (activeBroker === 'dhan') {
-                if (dhanClientIdInput) clientId = dhanClientIdInput.value.trim();
-                if (dhanTokenInput) token = dhanTokenInput.value.trim();
-            }
+            let token = upstoxTokenInput ? upstoxTokenInput.value.trim() : '';
 
             // If no broker credentials entered, run single-stock prediction fallback using manual inputs
             if (!token) {
@@ -240,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 })).filter(item => item.symbol !== '');
 
                 if (manualInputs.length === 0) {
-                    alert("Please connect a broker or add at least one stock symbol in Manual Override.");
+                    alert("Please connect Upstox or add at least one stock symbol in Manual Override.");
                     return;
                 }
 
@@ -289,16 +254,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Broker Sync Execution
+            // Broker Sync Execution (Upstox)
             const payload = {
-                broker: activeBroker,
+                broker: 'upstox',
                 access_token: token,
-                client_id: clientId,
                 model_type: modelTypeSelect ? modelTypeSelect.value : 'linear',
                 lookback_days: parseInt(lookbackDaysSelect ? lookbackDaysSelect.value : 90, 10)
             };
 
-            btnText.innerText = "Syncing Broker & Executing Analytics...";
+            btnText.innerText = "Syncing Upstox & Executing Analytics...";
             if (btnSpinner) btnSpinner.classList.remove('hidden');
             analyzeBtn.disabled = true;
 

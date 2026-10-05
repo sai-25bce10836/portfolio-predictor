@@ -19,14 +19,10 @@ class Settings(BaseSettings):
     DEFAULT_MODEL_TYPE: str = "linear"
     DEFAULT_LOOKBACK_DAYS: int = 90
 
-    # Upstox OAuth 2.0 Credentials (Free Broker API)
+    # Upstox OAuth 2.0 Credentials
     UPSTOX_CLIENT_ID: Optional[str] = None
     UPSTOX_CLIENT_SECRET: Optional[str] = None
-    UPSTOX_REDIRECT_URI: str = "http://localhost:8000/api/upstox/callback"
-
-    # Dhan API Credentials (Free Broker API)
-    DHAN_CLIENT_ID: Optional[str] = None
-    DHAN_ACCESS_TOKEN: Optional[str] = None
+    UPSTOX_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/upstox/callback"
 
     model_config = SettingsConfigDict(
         env_file=".env",

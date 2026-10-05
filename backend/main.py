@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 # Local module imports
 from config import settings
-from broker_sync import fetch_upstox_holdings, fetch_dhan_holdings, exchange_upstox_code
+from broker_sync import fetch_upstox_holdings, exchange_upstox_code
 from ml_engine import PortfolioMLEngine
 
 logging.basicConfig(level=logging.INFO)
@@ -39,9 +39,8 @@ app.add_middleware(
 # --- Request & Response Schemas ---
 
 class SyncAndAnalyzeRequest(BaseModel):
-    broker: str = Field(..., description="Broker identifier: 'upstox' or 'dhan'")
-    access_token: str = Field(..., description="OAuth Access Token (Upstox) or API Access Token (Dhan)")
-    client_id: Optional[str] = Field(None, description="Dhan Client ID (Required for Dhan integration)")
+    broker: str = Field("upstox", description="Broker identifier: 'upstox'")
+    access_token: str = Field(..., description="OAuth Access Token (Upstox)")
     model_type: str = Field("linear", description="Regression model: 'linear', 'xgboost', or 'trend'")
     lookback_days: int = Field(90, ge=30, le=365, description="Historical price lookback window in days")
 
@@ -98,7 +97,7 @@ async def upstox_callback(code: str = Query(..., description="OAuth authorizatio
 async def sync_and_analyze(payload: SyncAndAnalyzeRequest):
     """
     Stateless ML Portfolio Analytics Pipeline:
-    1. Fetches live holdings from Upstox (OAuth) or Dhan (API token).
+    1. Fetches live holdings from Upstox (OAuth).
     2. Normalizes symbols into Yahoo Finance format (e.g., RELIANCE -> RELIANCE.NS).
     3. Streams market data into selected ML engine (Linear / XGBoost / Trend Proxy).
     4. Computes T+1 NAV targets, portfolio Alpha yield, R² confidence, and target stock prices.
@@ -110,20 +109,10 @@ async def sync_and_analyze(payload: SyncAndAnalyzeRequest):
     try:
         if broker == "upstox":
             holdings = await fetch_upstox_holdings(access_token=payload.access_token)
-        elif broker == "dhan":
-            if not payload.client_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="client_id is required for Dhan API authentication."
-                )
-            holdings = await fetch_dhan_holdings(
-                client_id=payload.client_id,
-                access_token=payload.access_token
-            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unsupported broker. Allowed values: 'upstox', 'dhan'."
+                detail="Unsupported broker. Allowed values: 'upstox'."
             )
     except Exception as e:
         logger.error(f"Failed fetching holdings from {broker}: {str(e)}")
