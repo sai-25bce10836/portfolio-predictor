@@ -41,10 +41,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Helper: Extract Manual Holdings ---
     function getManualInputs() {
         if (!portfolioList) return [];
-        return Array.from(portfolioList.querySelectorAll('.portfolio-row')).map(row => ({
-            symbol: row.querySelector('.sym-input').value.trim().toUpperCase(),
-            shares: parseFloat(row.querySelector('.share-input').value) || 1
-        })).filter(item => item.symbol !== '');
+        // Matches both dynamic rows with .portfolio-row and standard flex containers
+        const rows = portfolioList.querySelectorAll('.portfolio-row, div.flex');
+        const items = [];
+        rows.forEach(row => {
+            const symInput = row.querySelector('.sym-input');
+            const shareInput = row.querySelector('.share-input');
+            if (symInput && symInput.value.trim() !== '') {
+                items.push({
+                    symbol: symInput.value.trim().toUpperCase(),
+                    shares: parseFloat(shareInput ? shareInput.value : 1) || 1
+                });
+            }
+        });
+        return items;
     }
 
     // --- OAuth Callback Handler ---
@@ -146,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function addStockRow(symbol = '', shares = '') {
         if (!portfolioList) return;
         const row = document.createElement('div');
-        row.className = 'portfolio-row flex items-center gap-2';
+        row.className = 'portfolio-row flex items-center gap-2 mb-2';
         row.innerHTML = `
             <input type="text" placeholder="RELIANCE.NS" value="${symbol}" class="sym-input w-2/3 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500 uppercase">
             <input type="number" placeholder="Qty" value="${shares}" class="share-input w-1/3 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500">
@@ -158,7 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (addBtn) addBtn.addEventListener('click', () => addStockRow('', ''));
 
-    // Populate initial manual rows
+    // Clear existing HTML elements and populate default initial manual rows
+    if (portfolioList) portfolioList.innerHTML = '';
     addStockRow('RELIANCE.NS', '10');
     addStockRow('TCS.NS', '5');
 
@@ -228,13 +239,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                 })
                 .then(async res => {
+                    const resJson = await res.json().catch(() => ({}));
                     if (!res.ok) {
-                        const errBody = await res.json().catch(() => ({}));
-                        return { data: { symbol: item.symbol, error: errBody.detail || `HTTP ${res.status}` } };
+                        return { error: resJson.detail || `HTTP ${res.status}` };
                     }
-                    return res.json();
+                    return resJson;
                 })
-                .catch(err => ({ data: { symbol: item.symbol, error: err.message } }))
+                .catch(err => ({ error: err.message }))
             );
 
             const responses = await Promise.all(fetchPromises);
@@ -244,18 +255,21 @@ document.addEventListener('DOMContentLoaded', () => {
             let totalAccuracyAcc = 0;
             let validCount = 0;
 
-            responses.forEach((resData) => {
-                const stockData = resData.data || resData;
-                if (stockData && !stockData.error) {
+            responses.forEach((resData, idx) => {
+                const stockData = resData.data ? resData.data : resData;
+                const reqSymbol = manualInputs[idx].symbol;
+
+                if (stockData && !stockData.error && (stockData.current_price || stockData.predicted_price)) {
+                    stockData.symbol = stockData.symbol || reqSymbol;
                     results.push(stockData);
-                    const curVal = (stockData.current_price || 0) * stockData.shares;
-                    const predVal = (stockData.predicted_price || 0) * stockData.shares;
+                    const curVal = (stockData.current_price || 0) * (stockData.shares || manualInputs[idx].shares);
+                    const predVal = (stockData.predicted_price || 0) * (stockData.shares || manualInputs[idx].shares);
                     totCurrent += curVal;
                     totPredicted += predVal;
                     totalAccuracyAcc += (stockData.accuracy || 0);
                     validCount++;
                 } else {
-                    results.push({ symbol: stockData.symbol || 'Unknown', error: stockData.error || 'Failed to resolve' });
+                    results.push({ symbol: reqSymbol, error: (stockData && stockData.error) || 'Failed to fetch data' });
                 }
             });
 
