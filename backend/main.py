@@ -18,8 +18,14 @@ app = FastAPI(
     description="Stateless broker sync & ML T+1 NAV prediction engine for Indian stock portfolios."
 )
 
-# Enforce strict CORS matching FRONTEND_URL in settings
-origins = [settings.FRONTEND_URL] if getattr(settings, "FRONTEND_URL", None) else ["http://localhost:3000", "http://127.0.0.1:5500"]
+# Enforce strict CORS matching FRONTEND_URL and Vercel production domain
+origins = [
+    getattr(settings, "FRONTEND_URL", None),
+    "https://portfolio-predictor.vercel.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:5500"
+]
+origins = [o for o in origins if o] # Filter out None values
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,7 +54,7 @@ async def health_check():
     return {"status": "ok", "service": "Quant ML Terminal Backend"}
 
 
-@app.get("/api/upstox/login", tags=["Authentication"])
+@app.get("/api/v1/auth/upstox/login", tags=["Authentication"])
 async def get_upstox_login_url():
     """Generates the Upstox OAuth 2.0 authorization dialog URL."""
     if not settings.UPSTOX_CLIENT_ID or not settings.UPSTOX_REDIRECT_URI:
@@ -65,7 +71,7 @@ async def get_upstox_login_url():
     return {"authorization_url": auth_url}
 
 
-@app.get("/api/upstox/callback", tags=["Authentication"])
+@app.get("/api/v1/auth/upstox/callback", tags=["Authentication"])
 async def upstox_callback(code: str = Query(..., description="OAuth authorization code returned by Upstox")):
     """Exchanges Upstox OAuth code for an access token."""
     try:
@@ -88,7 +94,7 @@ async def upstox_callback(code: str = Query(..., description="OAuth authorizatio
         )
 
 
-@app.post("/api/sync-and-analyze", tags=["Portfolio Analytics"])
+@app.post("/api/v1/sync-and-analyze", tags=["Portfolio Analytics"])
 async def sync_and_analyze(payload: SyncAndAnalyzeRequest):
     """
     Stateless ML Portfolio Analytics Pipeline:
