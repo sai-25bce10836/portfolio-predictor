@@ -1,163 +1,157 @@
-import numpy as np
-import pandas as pd
-from typing import List, Dict, Any
-from fastapi import FastAPI, HTTPException
+import logging
+from typing import Optional, Dict, Any, List
+from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import yfinance as yf
-from sklearn.linear_model import LinearRegression
+from pydantic import BaseModel, Field
+
+# Local module imports
+from config import settings
+from broker_sync import fetch_upstox_holdings, fetch_dhan_holdings, exchange_upstox_code
+from ml_engine import PortfolioMLEngine
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("quant_terminal")
 
 app = FastAPI(
-    title="ProFolio Analytics API",
-    description="Multi-Model Financial Forecasting Engine",
-    version="2.0.0"
+    title="Quantitative ML Portfolio Terminal API",
+    version="1.0.0",
+    description="Stateless broker sync & ML T+1 NAV prediction engine for Indian stock portfolios."
 )
+
+# Enforce strict CORS matching FRONTEND_URL in settings
+origins = [settings.FRONTEND_URL] if getattr(settings, "FRONTEND_URL", None) else ["http://localhost:3000", "http://127.0.0.1:5500"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-class StockItem(BaseModel):
-    symbol: str
-    shares: float
 
-class PortfolioPayload(BaseModel):
-    stocks: List[StockItem]
+# --- Request & Response Schemas ---
 
-def train_baseline_linear(prices: np.ndarray):
-    """Linear Baseline Regression Model"""
-    X = np.arange(len(prices)).reshape(-1, 1)
-    y = prices
-    model = LinearRegression()
-    model.fit(X, y)
+class SyncAndAnalyzeRequest(BaseModel):
+    broker: str = Field(..., description="Broker identifier: 'upstox' or 'dhan'")
+    access_token: str = Field(..., description="OAuth Access Token (Upstox) or API Access Token (Dhan)")
+    client_id: Optional[str] = Field(None, description="Dhan Client ID (Required for Dhan integration)")
+    model_type: str = Field("linear", description="Regression model: 'linear', 'xgboost', or 'trend'")
+    lookback_days: int = Field(90, ge=30, le=365, description="Historical price lookback window in days")
+
+
+# --- Endpoints ---
+
+@app.get("/health", tags=["System"])
+async def health_check():
+    """Health check endpoint to verify backend operational state."""
+    return {"status": "ok", "service": "Quant ML Terminal Backend"}
+
+
+@app.get("/api/upstox/login", tags=["Authentication"])
+async def get_upstox_login_url():
+    """Generates the Upstox OAuth 2.0 authorization dialog URL."""
+    if not settings.UPSTOX_CLIENT_ID or not settings.UPSTOX_REDIRECT_URI:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Upstox OAuth credentials (CLIENT_ID / REDIRECT_URI) are missing in backend/.env"
+        )
     
-    next_day = np.array([[len(prices)]])
-    pred_price = float(model.predict(next_day)[0])
-    r2 = float(max(0.65, min(0.95, model.score(X, y))))
-    return pred_price, r2 * 100
+    auth_url = (
+        f"https://api.upstox.com/v2/login/authorization/dialog"
+        f"?response_type=code&client_id={settings.UPSTOX_CLIENT_ID}"
+        f"&redirect_uri={settings.UPSTOX_REDIRECT_URI}"
+    )
+    return {"authorization_url": auth_url}
 
-def train_gradient_boost(prices: np.ndarray):
-    """Gradient Boosting Regression Simulation (XGBoost/LightGBM Handler)"""
-    returns = np.diff(prices) / prices[:-1]
-    momentum = np.mean(returns[-5:]) if len(returns) >= 5 else 0
-    volatility = np.std(returns) if len(returns) > 1 else 0.01
+
+@app.get("/api/upstox/callback", tags=["Authentication"])
+async def upstox_callback(code: str = Query(..., description="OAuth authorization code returned by Upstox")):
+    """Exchanges Upstox OAuth code for an access token."""
+    try:
+        token_data = await exchange_upstox_code(
+            code=code,
+            client_id=settings.UPSTOX_CLIENT_ID,
+            client_secret=settings.UPSTOX_CLIENT_SECRET,
+            redirect_uri=settings.UPSTOX_REDIRECT_URI
+        )
+        return {
+            "status": "success",
+            "access_token": token_data.get("access_token"),
+            "token_type": token_data.get("token_type", "Bearer")
+        }
+    except Exception as e:
+        logger.error(f"Upstox token exchange error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to exchange Upstox authorization code: {str(e)}"
+        )
+
+
+@app.post("/api/sync-and-analyze", tags=["Portfolio Analytics"])
+async def sync_and_analyze(payload: SyncAndAnalyzeRequest):
+    """
+    Stateless ML Portfolio Analytics Pipeline:
+    1. Fetches live holdings from Upstox (OAuth) or Dhan (API token).
+    2. Normalizes symbols into Yahoo Finance format (e.g., RELIANCE -> RELIANCE.NS).
+    3. Streams market data into selected ML engine (Linear / XGBoost / Trend Proxy).
+    4. Computes T+1 NAV targets, portfolio Alpha yield, R² confidence, and target stock prices.
+    5. Tokens exist only in memory during execution and are discarded immediately after.
+    """
+    broker = payload.broker.lower().strip()
     
-    last_price = prices[-1]
-    expected_return = momentum * 0.8 + (volatility * 0.1)
-    pred_price = float(last_price * (1 + expected_return))
-    
-    # Gradient models capture non-linear patterns better, yielding higher baseline accuracy
-    base_r2 = 88.0 + (np.random.rand() * 6.0)
-    return pred_price, min(97.5, base_r2)
+    # 1. Fetch broker holdings
+    try:
+        if broker == "upstox":
+            holdings = await fetch_upstox_holdings(access_token=payload.access_token)
+        elif broker == "dhan":
+            if not payload.client_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="client_id is required for Dhan API authentication."
+                )
+            holdings = await fetch_dhan_holdings(
+                client_id=payload.client_id,
+                access_token=payload.access_token
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported broker. Allowed values: 'upstox', 'dhan'."
+            )
+    except Exception as e:
+        logger.error(f"Failed fetching holdings from {broker}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Broker sync error ({broker}): {str(e)}"
+        )
 
-def train_deep_learning_lstm(prices: np.ndarray):
-    """Deep Learning Time-Series Simulation (LSTM / Transformer Handler)"""
-    last_price = prices[-1]
-    sma_10 = np.mean(prices[-10:]) if len(prices) >= 10 else last_price
-    trend_vector = (last_price - sma_10) / sma_10
-    
-    pred_price = float(last_price * (1 + (trend_vector * 0.25)))
-    
-    # Deep learning time-series models yield top-tier confidence metrics
-    base_r2 = 91.0 + (np.random.rand() * 5.5)
-    return pred_price, min(98.8, base_r2)
+    if not holdings:
+        return {
+            "status": "success",
+            "holdings_count": 0,
+            "message": "No active equity holdings found in portfolio.",
+            "data": None
+        }
 
-@app.get("/")
-def health_check():
-    return {"status": "online", "engine": "ProFolio Multi-Model Core"}
-
-@app.post("/analyze")
-async def analyze_portfolio(payload: PortfolioPayload):
-    if not payload.stocks:
-        raise HTTPException(status_code=400, detail="Portfolio payload cannot be empty.")
-
-    individual_results = []
-    tot_current_value = 0.0
-    tot_predicted_value = 0.0
-
-    for item in payload.stocks:
-        symbol = item.symbol.upper().strip()
-        shares = item.shares
-
-        try:
-            ticker = yf.Ticker(symbol)
-            df = ticker.history(period="60d")
-
-            if df.empty or len(df) < 10:
-                # Generate synthetic fallbacks if exchange lookup fails
-                dates = pd.date_range(end=pd.Timestamp.now(), periods=30, freq='B')
-                base_p = 150.0
-                prices = base_p + np.cumsum(np.random.randn(30) * 1.5)
-                history_data = [{"time": d.strftime("%Y-%m-%d"), "value": round(float(p), 2)} for d, p in zip(dates, prices)]
-            else:
-                prices = df['Close'].values
-                history_data = [
-                    {"time": idx.strftime("%Y-%m-%d"), "value": round(float(row['Close']), 2)}
-                    for idx, row in df.iterrows()
-                ]
-
-            current_price = float(prices[-1])
-            current_asset_val = current_price * shares
-            tot_current_value += current_asset_val
-
-            # Compute predictions across all 3 model architectures
-            lin_price, lin_r2 = train_baseline_linear(prices)
-            gb_price, gb_r2 = train_gradient_boost(prices)
-            lstm_price, lstm_r2 = train_deep_learning_lstm(prices)
-
-            # Default total prediction uses baseline current model
-            tot_predicted_value += (lin_price * shares)
-
-            next_date = (pd.Timestamp.now() + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-
-            individual_results.append({
-                "symbol": symbol,
-                "shares": shares,
-                "current_price": round(current_price, 2),
-                "prediction_date": next_date,
-                "history": history_data,
-                "models": {
-                    "current": {
-                        "name": "Linear Baseline",
-                        "predicted_price": round(lin_price, 2),
-                        "percentage_change": round(((lin_price - current_price) / current_price) * 100, 2),
-                        "accuracy": round(lin_r2, 1)
-                    },
-                    "gradient": {
-                        "name": "Gradient Boost (XGB)",
-                        "predicted_price": round(gb_price, 2),
-                        "percentage_change": round(((gb_price - current_price) / current_price) * 100, 2),
-                        "accuracy": round(gb_r2, 1)
-                    },
-                    "deep_learning": {
-                        "name": "Deep Learning (LSTM)",
-                        "predicted_price": round(lstm_price, 2),
-                        "percentage_change": round(((lstm_price - current_price) / current_price) * 100, 2),
-                        "accuracy": round(lstm_r2, 1)
-                    }
-                }
-            })
-
-        except Exception as e:
-            individual_results.append({
-                "symbol": symbol,
-                "shares": shares,
-                "error": f"Failed to calculate forecast: {str(e)}"
-            })
-
-    overall_pct_change = 0.0
-    if tot_current_value > 0:
-        overall_pct_change = ((tot_predicted_value - tot_current_value) / tot_current_value) * 100
+    # 2. Run Quantitative ML Pipeline
+    try:
+        engine = PortfolioMLEngine(
+            holdings=holdings,
+            model_type=payload.model_type,
+            lookback_days=payload.lookback_days
+        )
+        analytics_result = await engine.run_pipeline()
+    except Exception as e:
+        logger.error(f"ML Pipeline processing failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"ML Prediction Engine failure: {str(e)}"
+        )
 
     return {
-        "summary": {
-            "total_current_value": round(tot_current_value, 2),
-            "total_predicted_value": round(tot_predicted_value, 2),
-            "overall_percentage_change": round(overall_pct_change, 2)
-        },
-        "individual_results": individual_results
+        "status": "success",
+        "broker": broker,
+        "disclaimer": "SEBI Compliance Note: Predictions generated by quantitative models are strictly for analytical and educational purposes, not financial advice.",
+        "data": analytics_result
     }
