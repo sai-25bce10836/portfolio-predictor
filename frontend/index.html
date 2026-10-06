@@ -39,7 +39,27 @@
     
     <!-- TradingView Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
-    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* Custom scrollbar for terminal UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        #tv-chart canvas {
+            display: block !important;
+        }
+    </style>
 </head>
 <body class="h-full font-sans bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-blue-500 selection:text-white">
 
@@ -215,7 +235,7 @@
                 </div>
 
                 <!-- Table View -->
-                <div id="results-section" class="flex-1 p-4 overflow-y-auto hidden">
+                <div id="results-section" class="flex-1 p-4 overflow-x-auto overflow-y-auto hidden">
                     <table class="w-full text-left border-collapse text-xs font-mono">
                         <thead>
                             <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">

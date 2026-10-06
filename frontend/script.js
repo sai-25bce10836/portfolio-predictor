@@ -43,7 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!portfolioList) return [];
 
         const items = [];
-        // Iterate through each portfolio-row child container inside portfolioList
         const rows = portfolioList.querySelectorAll('.portfolio-row');
 
         rows.forEach(row => {
@@ -55,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sharesVal = shareInput ? (parseFloat(shareInput.value) || 1) : 1;
                 items.push({
                     symbol: rawSymbol.toUpperCase(),
-                    shares: sharesVal
+                    quantity: sharesVal
                 });
             }
         });
@@ -222,8 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function runManualEngine() {
         const manualInputs = getManualInputs();
         const lookbackDays = parseInt(lookbackDaysSelect ? lookbackDaysSelect.value : 90, 10);
-
-        console.log("Captured Manual Inputs Payload:", manualInputs);
+        const modelType = modelTypeSelect ? modelTypeSelect.value : 'linear';
 
         if (!manualInputs || manualInputs.length === 0) {
             alert("No tickers found. Please type a ticker symbol into the input field (e.g. RELIANCE.NS).");
@@ -235,73 +233,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if (manualAnalyzeBtn) manualAnalyzeBtn.disabled = true;
         if (analyzeBtn) analyzeBtn.disabled = true;
 
+        const payload = {
+            holdings: manualInputs,
+            model_type: modelType,
+            lookback_days: lookbackDays
+        };
+
         try {
-            const fetchPromises = manualInputs.map(item => {
-                const payload = {
-                    symbol: item.symbol,
-                    shares: item.shares,
-                    lookback_days: lookbackDays
-                };
-
-                return fetch(`${API_BASE_URL}/api/v1/predict-stock`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                })
-                .then(async res => {
-                    const resJson = await res.json().catch(() => ({}));
-                    if (!res.ok) {
-                        return { error: resJson.detail || `HTTP ${res.status}` };
-                    }
-                    return resJson;
-                })
-                .catch(err => ({ error: err.message }));
+            const response = await fetch(`${API_BASE_URL}/api/v1/predict-stock`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
-            
-            const responses = await Promise.all(fetchPromises);
+            const resJson = await response.json();
+            if (!response.ok) {
+                throw new Error(resJson.detail || `HTTP ${response.status}`);
+            }
 
-            const results = [];
-            let totCurrent = 0;
-            let totPredicted = 0;
-            let totalAccuracyAcc = 0;
-            let validCount = 0;
-
-            responses.forEach((resData, idx) => {
-                const stockData = resData.data ? resData.data : resData;
-                const reqSymbol = manualInputs[idx].symbol;
-
-                if (stockData && !stockData.error && (stockData.current_price || stockData.predicted_price)) {
-                    stockData.symbol = stockData.symbol || reqSymbol;
-                    results.push(stockData);
-                    const curVal = (stockData.current_price || 0) * (stockData.shares || manualInputs[idx].shares);
-                    const predVal = (stockData.predicted_price || 0) * (stockData.shares || manualInputs[idx].shares);
-                    totCurrent += curVal;
-                    totPredicted += predVal;
-                    totalAccuracyAcc += (stockData.accuracy || 0);
-                    validCount++;
-                } else {
-                    results.push({ symbol: reqSymbol, error: (stockData && stockData.error) || 'Failed to fetch data' });
-                }
-            });
-
-            if (validCount === 0) {
-                alert("Could not fetch data for specified manual tickers. Ensure symbols include suffixes (e.g., RELIANCE.NS).");
+            const analyticsData = resJson.data;
+            if (!analyticsData || !analyticsData.holdings) {
+                alert("Analysis returned an empty or invalid payload.");
                 return;
             }
 
-            const pctChange = totCurrent > 0 ? ((totPredicted - totCurrent) / totCurrent) * 100 : 0;
-            const avgAcc = validCount > 0 ? totalAccuracyAcc / validCount : 0;
+            globalPortfolioData = analyticsData.holdings;
+            lastSummaryData = analyticsData.summary;
 
-            globalPortfolioData = results;
-            lastSummaryData = {
-                total_current_value: totCurrent,
-                total_predicted_value: totPredicted,
-                portfolio_percentage_change: pctChange,
-                avg_accuracy: avgAcc
-            };
-
-            displayResults({ portfolio_summary: lastSummaryData, individual_results: globalPortfolioData });
+            displayResults(analyticsData);
             
             const firstValid = globalPortfolioData.find(item => !item.error);
             if (firstValid) renderChart(firstValid);
@@ -358,13 +317,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const resData = await response.json();
                 const analyticsData = resData.data;
 
-                if (!analyticsData || !analyticsData.individual_results) {
+                if (!analyticsData || !analyticsData.holdings) {
                     alert("No holdings found or analysis returned empty payload.");
                     return;
                 }
 
-                globalPortfolioData = analyticsData.individual_results;
-                lastSummaryData = analyticsData.portfolio_summary;
+                globalPortfolioData = analyticsData.holdings;
+                lastSummaryData = analyticsData.summary;
 
                 displayResults(analyticsData);
 
@@ -383,48 +342,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Render Metric Cards & Positions Table ---
     function displayResults(analyticsData) {
-        const summary = analyticsData.portfolio_summary || {};
+        const summary = analyticsData.summary || {};
         
         const totCurrentEl = document.getElementById('tot-current');
         const totPredictedEl = document.getElementById('tot-predicted');
-        if (totCurrentEl) totCurrentEl.innerText = formatINR(summary.total_current_value || 0);
-        if (totPredictedEl) totPredictedEl.innerText = formatINR(summary.total_predicted_value || 0);
+        if (totCurrentEl) totCurrentEl.innerText = formatINR(summary.total_current_nav || 0);
+        if (totPredictedEl) totPredictedEl.innerText = formatINR(summary.total_projected_nav || 0);
 
         const pctEl = document.getElementById('tot-change');
         if (pctEl) {
-            const pctVal = summary.portfolio_percentage_change || 0;
+            const pctVal = summary.portfolio_alpha_pct || 0;
             pctEl.innerText = `${pctVal >= 0 ? '+' : ''}${pctVal.toFixed(2)}%`;
             pctEl.className = `text-xl font-bold font-mono mt-1 ${pctVal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
         }
 
         const avgConfidenceEl = document.getElementById('avg-confidence');
         if (avgConfidenceEl) {
-            avgConfidenceEl.innerText = `${(summary.avg_accuracy || 0).toFixed(1)}%`;
+            const r2Val = (summary.average_r2_confidence || 0) * 100;
+            avgConfidenceEl.innerText = `${r2Val.toFixed(1)}%`;
         }
 
         const tbody = document.getElementById('results-body');
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        analyticsData.individual_results.forEach(item => {
+        const holdings = analyticsData.holdings || [];
+        holdings.forEach(item => {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-800/50 cursor-pointer transition";
 
             if (item.error) {
                 tr.innerHTML = `<td colspan="6" class="py-3 text-rose-400 font-sans">${item.symbol}: ${item.error}</td>`;
             } else {
-                const isPositive = item.percentage_change >= 0;
+                const changePct = item.expected_change_pct || 0;
+                const isPositive = changePct >= 0;
                 tr.innerHTML = `
                     <td class="py-3 font-bold text-slate-100">${item.symbol}</td>
-                    <td class="py-3">${item.shares}</td>
+                    <td class="py-3">${item.quantity}</td>
                     <td class="py-3">${formatINR(item.current_price)}</td>
-                    <td class="py-3 text-blue-400 font-semibold">${formatINR(item.predicted_price)}</td>
+                    <td class="py-3 text-blue-400 font-semibold">${formatINR(item.target_price_t1)}</td>
                     <td class="py-3 font-semibold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}">
-                        ${isPositive ? '+' : ''}${item.percentage_change.toFixed(2)}%
+                        ${isPositive ? '+' : ''}${changePct.toFixed(2)}%
                     </td>
                     <td class="py-3">
                         <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                            ${(item.accuracy || 0).toFixed(1)}%
+                            ${((item.model_r2_score || 0) * 100).toFixed(1)}%
                         </span>
                     </td>
                 `;
@@ -442,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chartTitle = document.getElementById('chart-title');
         const chartAccuracy = document.getElementById('chart-accuracy');
         if (chartTitle) chartTitle.innerText = `${itemData.symbol} Target Trajectory`;
-        if (chartAccuracy) chartAccuracy.innerText = `R² Confidence: ${(itemData.accuracy || 0).toFixed(1)}%`;
+        if (chartAccuracy) chartAccuracy.innerText = `R² Confidence: ${((itemData.model_r2_score || 0) * 100).toFixed(1)}%`;
 
         if (!itemData.history || itemData.history.length === 0 || !lineSeries || !predictedSeries) return;
 
@@ -451,10 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         predictedSeries.setData([
             lastHistorical,
-            { time: itemData.prediction_date, value: itemData.predicted_price }
+            { time: itemData.prediction_date, value: itemData.target_price_t1 }
         ]);
 
-        const trendColor = itemData.predicted_price >= lastHistorical.value ? '#10b981' : '#f43f5e';
+        const trendColor = itemData.target_price_t1 >= lastHistorical.value ? '#10b981' : '#f43f5e';
         predictedSeries.applyOptions({ color: trendColor });
 
         setTimeout(() => {
@@ -479,15 +441,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (simulateBtn) {
         simulateBtn.addEventListener('click', () => {
-            if (!lastSummaryData || lastSummaryData.total_current_value === 0) {
+            if (!lastSummaryData || lastSummaryData.total_current_nav === 0) {
                 alert("Please execute a valid forecast with active portfolio results first.");
                 return;
             }
 
             const shiftPercent = parseFloat(weightSlider ? weightSlider.value : 0) / 100;
-            const basePredicted = lastSummaryData.total_predicted_value;
+            const basePredicted = lastSummaryData.total_projected_nav;
             const simulatedPredicted = basePredicted * (1 + shiftPercent);
-            const baseCurrent = lastSummaryData.total_current_value;
+            const baseCurrent = lastSummaryData.total_current_nav;
             const simulatedPctChange = baseCurrent > 0 ? ((simulatedPredicted - baseCurrent) / baseCurrent) * 100 : 0;
 
             const totPredictedEl = document.getElementById('tot-predicted');

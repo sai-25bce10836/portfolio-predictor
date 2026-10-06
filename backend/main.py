@@ -19,19 +19,24 @@ app = FastAPI(
 )
 
 # Enforce strict CORS matching FRONTEND_URL and Vercel production domain
-origins = [
-    getattr(settings, "FRONTEND_URL", None),
+default_origins = [
     "https://portfolio-predictor.vercel.app",
     "http://localhost:3000",
-    "http://127.0.0.1:5500"
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
 ]
-origins = [o for o in origins if o] # Filter out None values
+
+frontend_url = getattr(settings, "FRONTEND_URL", None)
+if frontend_url and frontend_url.strip() != "*":
+    default_origins.append(frontend_url.strip().rstrip("/"))
+
+origins = list(set([o for o in default_origins if o]))
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -67,10 +72,10 @@ async def health_check():
 @app.get("/api/v1/auth/upstox/login", tags=["Authentication"])
 async def get_upstox_login_url():
     """Generates the Upstox OAuth 2.0 authorization dialog URL."""
-    if not settings.UPSTOX_CLIENT_ID or not settings.UPSTOX_REDIRECT_URI:
+    if not getattr(settings, "UPSTOX_CLIENT_ID", None) or not getattr(settings, "UPSTOX_REDIRECT_URI", None):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Upstox OAuth credentials (CLIENT_ID / REDIRECT_URI) are missing in backend/.env"
+            detail="Upstox OAuth credentials (CLIENT_ID / REDIRECT_URI) are missing in backend environment variables."
         )
     
     auth_url = (
@@ -97,7 +102,7 @@ async def upstox_callback(code: str = Query(..., description="OAuth authorizatio
             "token_type": token_data.get("token_type", "Bearer")
         }
     except Exception as e:
-        logger.error(f"Upstox token exchange error: {str(e)}")
+        logger.error(f"Upstox token exchange error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to exchange Upstox authorization code: {str(e)}"
@@ -125,8 +130,10 @@ async def sync_and_analyze(payload: SyncAndAnalyzeRequest):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Unsupported broker. Allowed values: 'upstox'."
             )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed fetching holdings from {broker}: {str(e)}")
+        logger.error(f"Failed fetching holdings from {broker}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Broker sync error ({broker}): {str(e)}"
@@ -149,7 +156,7 @@ async def sync_and_analyze(payload: SyncAndAnalyzeRequest):
         )
         analytics_result = await engine.run_pipeline()
     except Exception as e:
-        logger.error(f"ML Pipeline processing failed: {str(e)}")
+        logger.error(f"ML Pipeline processing failed: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"ML Prediction Engine failure: {str(e)}"
@@ -178,7 +185,7 @@ async def predict_stock(payload: PredictStockRequest):
 
     # Convert Pydantic holdings list to dict objects compatible with PortfolioMLEngine
     holdings_dict = [
-        {"trading_symbol": item.symbol, "quantity": item.quantity}
+        {"trading_symbol": item.symbol, "symbol": item.symbol, "quantity": item.quantity}
         for item in payload.holdings
     ]
 
@@ -190,7 +197,7 @@ async def predict_stock(payload: PredictStockRequest):
         )
         analytics_result = await engine.run_pipeline()
     except Exception as e:
-        logger.error(f"Manual ML Pipeline processing failed: {str(e)}")
+        logger.error(f"Manual ML Pipeline processing failed: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"ML Prediction Engine failure: {str(e)}"
