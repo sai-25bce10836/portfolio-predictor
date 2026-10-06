@@ -258,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .catch(err => ({ error: err.message }));
             });
 
+            
             const responses = await Promise.all(fetchPromises);
 
             const results = [];
