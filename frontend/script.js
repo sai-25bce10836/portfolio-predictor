@@ -112,16 +112,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Safe Chart Canvas Resize Logic ---
+    function resizeChartCanvas() {
+        const chartContainer = document.getElementById('tv-chart');
+        if (chartContainer && chart) {
+            const width = chartContainer.clientWidth || 600;
+            const height = chartContainer.clientHeight > 0 ? chartContainer.clientHeight : 340;
+            
+            chart.applyOptions({ width, height });
+            chart.timeScale().fitContent();
+        }
+    }
+
     // --- TradingView Lightweight Charts Setup ---
     function initChart() {
         const chartContainer = document.getElementById('tv-chart');
         if (!chartContainer || typeof LightweightCharts === 'undefined') return;
 
-        chartContainer.innerHTML = ''; // Clear prior canvas
+        chartContainer.innerHTML = ''; // Clear prior canvas elements
+
+        const initialWidth = chartContainer.clientWidth || 600;
+        const initialHeight = chartContainer.clientHeight > 0 ? chartContainer.clientHeight : 340;
 
         chart = LightweightCharts.createChart(chartContainer, {
-            width: chartContainer.clientWidth || 600,
-            height: chartContainer.clientHeight || 340,
+            width: initialWidth,
+            height: initialHeight,
             layout: {
                 background: { type: 'solid', color: '#0f172a' },
                 textColor: '#94a3b8',
@@ -139,18 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
         lineSeries = chart.addLineSeries({ color: '#3b82f6', lineWidth: 2, crosshairMarkerRadius: 5 });
         predictedSeries = chart.addLineSeries({ color: '#10b981', lineWidth: 2, lineStyle: LightweightCharts.LineStyle.Dotted });
 
-        const resizeChart = () => {
-            if (chartContainer && chartContainer.clientWidth > 0 && chart) {
-                chart.applyOptions({
-                    width: chartContainer.clientWidth,
-                    height: chartContainer.clientHeight || 340
-                });
-            }
-        };
-
-        window.addEventListener('resize', resizeChart);
+        window.addEventListener('resize', resizeChartCanvas);
         if (window.ResizeObserver) {
-            const ro = new ResizeObserver(() => resizeChart());
+            const ro = new ResizeObserver(() => resizeChartCanvas());
             ro.observe(chartContainer);
         }
     }
@@ -188,13 +194,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chartSection) chartSection.classList.remove('hidden');
             if (resultsSection) resultsSection.classList.add('hidden');
             
-            setTimeout(() => {
-                const chartContainer = document.getElementById('tv-chart');
-                if (chartContainer && chart) {
-                    chart.applyOptions({ width: chartContainer.clientWidth });
-                    chart.timeScale().fitContent();
-                }
-            }, 50);
+            // Allow container layout calculation to finish before fitting chart
+            requestAnimationFrame(() => {
+                resizeChartCanvas();
+            });
         });
 
         btnShowTable.addEventListener('click', () => {
@@ -419,16 +422,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const trendColor = itemData.target_price_t1 >= lastHistorical.value ? '#10b981' : '#f43f5e';
         predictedSeries.applyOptions({ color: trendColor });
 
-        setTimeout(() => {
-            const chartContainer = document.getElementById('tv-chart');
-            if (chartContainer && chart) {
-                chart.applyOptions({
-                    width: chartContainer.clientWidth,
-                    height: chartContainer.clientHeight || 340
-                });
-                chart.timeScale().fitContent();
-            }
-        }, 50);
+        // Ensure canvas recalculates dimensions after series data assignment
+        requestAnimationFrame(() => {
+            resizeChartCanvas();
+        });
     }
 
     // --- What-If Stress Testing Simulator ---

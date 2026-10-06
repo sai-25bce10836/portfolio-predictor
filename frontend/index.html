@@ -207,8 +207,8 @@
                 <!-- Viewport Control Bar -->
                 <div class="h-12 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 bg-slate-900/80">
                     <div class="flex items-center gap-2">
-                        <button id="btn-show-chart" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-white border border-slate-700 transition">Trajectory Chart</button>
-                        <button id="btn-show-table" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition">Positions Breakdown</button>
+                        <button id="btn-show-chart" data-tab="chart" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-white border border-slate-700 transition">Trajectory Chart</button>
+                        <button id="btn-show-table" data-tab="table" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition">Positions Breakdown</button>
                     </div>
 
                     <div class="flex items-center gap-4 text-xs font-mono">
@@ -222,8 +222,8 @@
                 </div>
 
                 <!-- Chart View -->
-                <div id="chart-section" class="flex-1 p-4 flex flex-col">
-                    <div class="flex items-center justify-between mb-3">
+                <div id="chart-section" class="flex-1 p-4 flex flex-col min-h-[380px]">
+                    <div class="flex items-center justify-between mb-3 shrink-0">
                         <div>
                             <h3 id="chart-title" class="text-sm font-semibold text-slate-200">Select a holding to inspect price trajectory</h3>
                             <span class="text-xs text-slate-500">Daily Close vs Machine Learning Prediction</span>
@@ -231,7 +231,8 @@
                         <span id="chart-accuracy" class="text-xs font-mono px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700">R²: --</span>
                     </div>
 
-                    <div id="tv-chart" class="flex-1 w-full min-h-[340px] relative rounded-lg overflow-hidden"></div>
+                    <!-- Explicit Min-Height prevents 0px canvas collapse -->
+                    <div id="tv-chart" class="flex-1 w-full h-[340px] min-h-[340px] relative rounded-lg overflow-hidden bg-slate-950/50"></div>
                 </div>
 
                 <!-- Table View -->
