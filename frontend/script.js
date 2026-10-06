@@ -38,22 +38,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Currency Formatter
     const formatINR = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val || 0);
 
-    // --- Helper: Extract Manual Holdings ---
+    // --- Direct Input Extraction Helper ---
     function getManualInputs() {
         if (!portfolioList) return [];
-        // Matches both dynamic rows with .portfolio-row and standard flex containers
-        const rows = portfolioList.querySelectorAll('.portfolio-row, div.flex');
+
         const items = [];
+        // Iterate through each portfolio-row child container inside portfolioList
+        const rows = portfolioList.querySelectorAll('.portfolio-row');
+
         rows.forEach(row => {
-            const symInput = row.querySelector('.sym-input');
-            const shareInput = row.querySelector('.share-input');
-            if (symInput && symInput.value.trim() !== '') {
+            const symInput = row.querySelector('.sym-input, input[type="text"]');
+            const shareInput = row.querySelector('.share-input, input[type="number"]');
+
+            const rawSymbol = symInput && symInput.value ? symInput.value.trim() : '';
+            if (rawSymbol !== '') {
+                const sharesVal = shareInput ? (parseFloat(shareInput.value) || 1) : 1;
                 items.push({
-                    symbol: symInput.value.trim().toUpperCase(),
-                    shares: parseFloat(shareInput ? shareInput.value : 1) || 1
+                    symbol: rawSymbol.toUpperCase(),
+                    shares: sharesVal
                 });
             }
         });
+
         return items;
     }
 
@@ -152,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initChart();
 
-    // --- Manual Asset Override Helper ---
+    // --- Manual Asset Row Injector ---
     function addStockRow(symbol = '', shares = '') {
         if (!portfolioList) return;
         const row = document.createElement('div');
@@ -166,9 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
         portfolioList.appendChild(row);
     }
 
-    if (addBtn) addBtn.addEventListener('click', () => addStockRow('', ''));
+    if (addBtn) addBtn.addEventListener('click', () => addStockRow('', '1'));
 
-    // Clear existing HTML elements and populate default initial manual rows
+    // Populate default initial manual rows
     if (portfolioList) portfolioList.innerHTML = '';
     addStockRow('RELIANCE.NS', '10');
     addStockRow('TCS.NS', '5');
@@ -217,8 +223,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const manualInputs = getManualInputs();
         const lookbackDays = parseInt(lookbackDaysSelect ? lookbackDaysSelect.value : 90, 10);
 
-        if (manualInputs.length === 0) {
-            alert("Please add at least one stock symbol in Manual Override.");
+        console.log("Captured Manual Inputs Payload:", manualInputs);
+
+        if (!manualInputs || manualInputs.length === 0) {
+            alert("No tickers found. Please type a ticker symbol into the input field (e.g. RELIANCE.NS).");
             return;
         }
 
@@ -228,15 +236,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (analyzeBtn) analyzeBtn.disabled = true;
 
         try {
-            const fetchPromises = manualInputs.map(item =>
-                fetch(`${API_BASE_URL}/api/v1/predict-stock`, {
+            const fetchPromises = manualInputs.map(item => {
+                const payload = {
+                    symbol: item.symbol,
+                    shares: item.shares,
+                    lookback_days: lookbackDays
+                };
+
+                return fetch(`${API_BASE_URL}/api/v1/predict-stock`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        symbol: item.symbol,
-                        shares: item.shares,
-                        lookback_days: lookbackDays
-                    })
+                    body: JSON.stringify(payload)
                 })
                 .then(async res => {
                     const resJson = await res.json().catch(() => ({}));
@@ -245,10 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     return resJson;
                 })
-                .catch(err => ({ error: err.message }))
-            );
+                .catch(err => ({ error: err.message }));
+            });
 
             const responses = await Promise.all(fetchPromises);
+
             const results = [];
             let totCurrent = 0;
             let totPredicted = 0;
