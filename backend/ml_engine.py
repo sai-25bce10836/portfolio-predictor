@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -18,9 +18,38 @@ class PortfolioMLEngine:
     """
 
     def __init__(self, holdings: List[Dict[str, Any]], model_type: str = "linear", lookback_days: int = 90):
-        self.holdings = holdings
+        self.holdings = self._normalize_holdings(holdings)
         self.model_type = model_type.lower().strip()
         self.lookback_days = lookback_days
+
+    def _normalize_holdings(self, raw_holdings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Normalizes holding dictionaries to accept either 'symbol' or 'trading_symbol',
+        and ensures Indian equity tickers have '.NS' or '.BO' suffixes for yfinance.
+        """
+        normalized = []
+        for item in raw_holdings:
+            sym = item.get("symbol") or item.get("trading_symbol") or item.get("tradingsymbol")
+            if not sym:
+                continue
+
+            sym = str(sym).upper().strip()
+            # Append .NS default suffix for Indian stock tickers if missing
+            if not sym.endswith(".NS") and not sym.endswith(".BO") and not sym.startswith("^"):
+                sym = f"{sym}.NS"
+
+            qty = float(item.get("quantity") or item.get("quantity_held") or 0.0)
+            avg_price = float(item.get("average_price") or item.get("avg_price") or 0.0)
+            last_price = float(item.get("last_price") or item.get("close") or 0.0)
+
+            normalized.append({
+                "symbol": sym,
+                "company_name": item.get("company_name", sym.replace(".NS", "").replace(".BO", "")),
+                "quantity": qty,
+                "average_price": avg_price,
+                "last_price": last_price
+            })
+        return normalized
 
     async def run_pipeline(self) -> Dict[str, Any]:
         if not self.holdings:
@@ -31,8 +60,8 @@ class PortfolioMLEngine:
             raise ValueError("No valid tickers found in portfolio holdings.")
 
         logger.info(f"Downloading {self.lookback_days}d price history for {len(symbols)} tickers...")
-        
-        # Download historical daily data
+
+        # Download historical daily price data
         try:
             df_data = yf.download(
                 tickers=symbols,
@@ -53,25 +82,23 @@ class PortfolioMLEngine:
         total_projected_nav = 0.0
         weighted_r2_sum = 0.0
 
-        # Calculate initial holding values
+        # Pass 1: Calculate total current NAV
         for holding in self.holdings:
             symbol = holding["symbol"]
             qty = holding["quantity"]
             series = close_prices.get(symbol)
 
-            # Fallback to last_price from broker if yfinance fetch fails for a symbol
             latest_price = float(series.dropna().iloc[-1]) if (series is not None and not series.dropna().empty) else float(holding.get("last_price", 0.0))
             holding_current_val = latest_price * qty
             total_current_nav += holding_current_val
 
-        # Train models and run T+1 predictions
+        # Pass 2: Train models and execute T+1 predictions
         for holding in self.holdings:
             symbol = holding["symbol"]
             qty = holding["quantity"]
             series = close_prices.get(symbol)
 
             if series is None or series.dropna().shape[0] < 15:
-                # Insufficient historical data fallback
                 latest_price = float(holding.get("last_price", 0.0))
                 pred_price = latest_price
                 r2_score = 0.0
@@ -121,27 +148,31 @@ class PortfolioMLEngine:
     def _extract_close_prices(self, df_data: pd.DataFrame, symbols: List[str]) -> Dict[str, pd.Series]:
         """Extracts individual close price pd.Series per stock regardless of yfinance multi-index format."""
         result = {}
-        if df_data.empty:
+        if df_data is None or df_data.empty:
             return result
 
         if isinstance(df_data.columns, pd.MultiIndex):
-            if "Close" in df_data.columns.levels[0]:
+            # Check for Price Level multi-index (Price, Ticker)
+            if "Close" in df_data.columns.get_level_values(0):
+                close_df = df_data["Close"]
                 for sym in symbols:
-                    if sym in df_data["Close"].columns:
-                        result[sym] = df_data["Close"][sym]
-            else:
+                    if sym in close_df.columns:
+                        result[sym] = close_df[sym]
+            elif "Close" in df_data.columns.get_level_values(1):
                 for sym in symbols:
-                    if sym in df_data.columns.levels[0] and "Close" in df_data[sym]:
-                        result[sym] = df_data[sym]["Close"]
+                    try:
+                        result[sym] = df_data.xs("Close", level=1, axis=1)[sym]
+                    except KeyError:
+                        pass
         else:
-            if "Close" in df_data.columns and len(symbols) == 1:
+            if "Close" in df_data.columns:
                 result[symbols[0]] = df_data["Close"]
             elif len(symbols) == 1 and isinstance(df_data, pd.Series):
                 result[symbols[0]] = df_data
 
         return result
 
-    def _predict_next_close(self, prices: np.ndarray) -> tuple[float, float]:
+    def _predict_next_close(self, prices: np.ndarray) -> Tuple[float, float]:
         """
         Trains model on price features and outputs (T+1 Predicted Price, R² Score).
         Prevents data leakage by shifting rolling averages.
