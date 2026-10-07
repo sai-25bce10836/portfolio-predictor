@@ -48,7 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let globalPortfolioData = [];
     let chart = null;
     let lineSeries = null;
+    let candlestickSeries = null;
+    let barSeries = null;
+    let areaSeries = null;
     let predictedSeries = null;
+    let currentChartType =
+        localStorage.getItem('profolio-chart-type') || 'line';
 
     // =========================================================
     // THEME MANAGEMENT
@@ -79,6 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'profolio-theme',
             isLight ? 'light' : 'dark'
         );
+
+        updateChartTypeControl();
 
         // Keep the TradingView chart visually consistent with the selected theme.
         if (chart) {
@@ -373,6 +380,307 @@ document.addEventListener('DOMContentLoaded', () => {
     // TRADINGVIEW LIGHTWEIGHT CHARTS SETUP
     // =========================================================
 
+    // =========================================================
+    // CHART TYPE MANAGEMENT
+    // =========================================================
+
+    function createChartTypeControl() {
+
+        const chartContainer =
+            document.getElementById('tv-chart');
+
+        if (!chartContainer) return;
+
+        let control =
+            document.getElementById('chart-type-control');
+
+        if (!control) {
+
+            control =
+                document.createElement('div');
+
+            control.id =
+                'chart-type-control';
+
+            control.className =
+                'flex items-center gap-1 p-1 rounded-lg border border-slate-700 bg-slate-900/80 mb-2 w-fit';
+
+            control.innerHTML = `
+                <span class="px-2 text-[10px] uppercase tracking-wider text-slate-400 font-mono hidden sm:inline">
+                    Chart
+                </span>
+
+                <button
+                    type="button"
+                    data-chart-type="line"
+                    class="chart-type-btn px-2.5 py-1.5 rounded-md text-[11px] font-mono transition"
+                    title="Line chart"
+                >
+                    Line
+                </button>
+
+                <button
+                    type="button"
+                    data-chart-type="candlestick"
+                    class="chart-type-btn px-2.5 py-1.5 rounded-md text-[11px] font-mono transition"
+                    title="Candlestick chart"
+                >
+                    Candles
+                </button>
+
+                <button
+                    type="button"
+                    data-chart-type="bar"
+                    class="chart-type-btn px-2.5 py-1.5 rounded-md text-[11px] font-mono transition"
+                    title="OHLC bar chart"
+                >
+                    Bar
+                </button>
+
+                <button
+                    type="button"
+                    data-chart-type="area"
+                    class="chart-type-btn px-2.5 py-1.5 rounded-md text-[11px] font-mono transition"
+                    title="Area chart"
+                >
+                    Area
+                </button>
+            `;
+
+            chartContainer.parentNode.insertBefore(
+                control,
+                chartContainer
+            );
+
+            control
+                .querySelectorAll('.chart-type-btn')
+                .forEach(button => {
+
+                    button.addEventListener(
+                        'click',
+                        () => {
+                            applyChartType(
+                                button.dataset.chartType
+                            );
+                        }
+                    );
+                });
+        }
+
+        updateChartTypeControl();
+    }
+
+    function updateChartTypeControl() {
+
+        const control =
+            document.getElementById(
+                'chart-type-control'
+            );
+
+        if (!control) return;
+
+        const isLight =
+            document.body.classList.contains(
+                'light-theme'
+            );
+
+        control.style.background =
+            isLight
+                ? 'rgba(255, 255, 255, 0.92)'
+                : 'rgba(15, 23, 42, 0.80)';
+
+        control.style.borderColor =
+            isLight
+                ? '#dfe3e8'
+                : '#334155';
+
+        control
+            .querySelectorAll('.chart-type-btn')
+            .forEach(button => {
+
+                const active =
+                    button.dataset.chartType ===
+                    currentChartType;
+
+                button.style.background =
+                    active
+                        ? (
+                            isLight
+                                ? '#315bb5'
+                                : '#334155'
+                        )
+                        : 'transparent';
+
+                button.style.color =
+                    active
+                        ? '#ffffff'
+                        : (
+                            isLight
+                                ? '#475467'
+                                : '#94a3b8'
+                        );
+            });
+
+        const label =
+            control.querySelector('span');
+
+        if (label) {
+            label.style.color =
+                isLight
+                    ? '#667085'
+                    : '#94a3b8';
+        }
+    }
+
+    function applyChartType(type) {
+
+        const validTypes = [
+            'line',
+            'candlestick',
+            'bar',
+            'area'
+        ];
+
+        if (!validTypes.includes(type)) {
+            type = 'line';
+        }
+
+        currentChartType = type;
+
+        localStorage.setItem(
+            'profolio-chart-type',
+            currentChartType
+        );
+
+        if (lineSeries) {
+            lineSeries.applyOptions({
+                visible:
+                    currentChartType === 'line'
+            });
+        }
+
+        if (candlestickSeries) {
+            candlestickSeries.applyOptions({
+                visible:
+                    currentChartType === 'candlestick'
+            });
+        }
+
+        if (barSeries) {
+            barSeries.applyOptions({
+                visible:
+                    currentChartType === 'bar'
+            });
+        }
+
+        if (areaSeries) {
+            areaSeries.applyOptions({
+                visible:
+                    currentChartType === 'area'
+            });
+        }
+
+        // The T+1 forecast remains visible regardless
+        // of which historical chart type is selected.
+        if (predictedSeries) {
+            predictedSeries.applyOptions({
+                visible: true
+            });
+        }
+
+        updateChartTypeControl();
+
+        if (chart) {
+            requestAnimationFrame(() => {
+                resizeChartCanvas();
+            });
+        }
+    }
+
+    function applyChartSeriesTheme(isLight) {
+
+        if (lineSeries) {
+            lineSeries.applyOptions({
+                color:
+                    isLight
+                        ? '#315bb5'
+                        : '#3b82f6'
+            });
+        }
+
+        if (candlestickSeries) {
+            candlestickSeries.applyOptions({
+
+                upColor:
+                    isLight
+                        ? '#0f8a68'
+                        : '#10b981',
+
+                downColor:
+                    isLight
+                        ? '#d63b55'
+                        : '#f43f5e',
+
+                borderUpColor:
+                    isLight
+                        ? '#0f8a68'
+                        : '#10b981',
+
+                borderDownColor:
+                    isLight
+                        ? '#d63b55'
+                        : '#f43f5e',
+
+                wickUpColor:
+                    isLight
+                        ? '#0f8a68'
+                        : '#10b981',
+
+                wickDownColor:
+                    isLight
+                        ? '#d63b55'
+                        : '#f43f5e'
+            });
+        }
+
+        if (barSeries) {
+            barSeries.applyOptions({
+
+                upColor:
+                    isLight
+                        ? '#0f8a68'
+                        : '#10b981',
+
+                downColor:
+                    isLight
+                        ? '#d63b55'
+                        : '#f43f5e'
+            });
+        }
+
+        if (areaSeries) {
+            areaSeries.applyOptions({
+
+                lineColor:
+                    isLight
+                        ? '#315bb5'
+                        : '#3b82f6',
+
+                topColor:
+                    isLight
+                        ? 'rgba(49, 91, 181, 0.22)'
+                        : 'rgba(59, 130, 246, 0.28)',
+
+                bottomColor:
+                    isLight
+                        ? 'rgba(49, 91, 181, 0.02)'
+                        : 'rgba(59, 130, 246, 0.02)'
+            });
+        }
+
+        updateChartTypeControl();
+    }
+
     function initChart() {
 
         const chartContainer =
@@ -474,7 +782,43 @@ document.addEventListener('DOMContentLoaded', () => {
             chart.addLineSeries({
                 color: '#3b82f6',
                 lineWidth: 2,
-                crosshairMarkerRadius: 5
+                crosshairMarkerRadius: 5,
+                visible:
+                    currentChartType === 'line'
+            });
+
+        candlestickSeries =
+            chart.addCandlestickSeries({
+                upColor: '#10b981',
+                downColor: '#f43f5e',
+                borderUpColor: '#10b981',
+                borderDownColor: '#f43f5e',
+                wickUpColor: '#10b981',
+                wickDownColor: '#f43f5e',
+                visible:
+                    currentChartType === 'candlestick'
+            });
+
+        barSeries =
+            chart.addBarSeries({
+                upColor: '#10b981',
+                downColor: '#f43f5e',
+                openVisible: true,
+                thinBars: false,
+                visible:
+                    currentChartType === 'bar'
+            });
+
+        areaSeries =
+            chart.addAreaSeries({
+                lineColor: '#3b82f6',
+                topColor:
+                    'rgba(59, 130, 246, 0.28)',
+                bottomColor:
+                    'rgba(59, 130, 246, 0.02)',
+                lineWidth: 2,
+                visible:
+                    currentChartType === 'area'
             });
 
         predictedSeries =
@@ -484,8 +828,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 lineStyle:
                     LightweightCharts
                         .LineStyle
-                        .Dotted
+                        .Dotted,
+                visible: true
             });
+
+        applyChartSeriesTheme(
+            isLightTheme
+        );
+
+        createChartTypeControl();
+
+        applyChartType(
+            currentChartType
+        );
 
         window.addEventListener(
             'resize',
@@ -1601,47 +1956,179 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (
-            !itemData.history ||
-            itemData.history.length === 0 ||
+            !itemData ||
+            !chart ||
             !lineSeries ||
             !predictedSeries
         ) {
             return;
         }
 
+        // ---------------------------------------------------------
+        // Historical close data
+        // ---------------------------------------------------------
+        const history =
+            Array.isArray(itemData.history)
+                ? itemData.history
+                : [];
+
+        if (history.length === 0) {
+            return;
+        }
+
+        // ---------------------------------------------------------
+        // OHLC data for Candlestick / Bar charts
+        // ---------------------------------------------------------
+        let ohlcHistory =
+            Array.isArray(
+                itemData.ohlc_history
+            )
+                ? itemData.ohlc_history
+                : [];
+
+        /*
+         * Backward-compatible fallback.
+         *
+         * The deployed backend now supplies real OHLC data.
+         * If an older response is ever loaded, the chart can
+         * still render by creating flat OHLC candles from Close.
+         */
+        if (
+            ohlcHistory.length === 0 &&
+            history.length > 0
+        ) {
+
+            ohlcHistory =
+                history.map(point => ({
+                    time: point.time,
+                    open: point.value,
+                    high: point.value,
+                    low: point.value,
+                    close: point.value
+                }));
+        }
+
+        // ---------------------------------------------------------
+        // Feed historical data into every chart series.
+        // Only the selected series is visible.
+        // ---------------------------------------------------------
         lineSeries.setData(
-            itemData.history
+            history
         );
 
+        if (areaSeries) {
+            areaSeries.setData(
+                history
+            );
+        }
+
+        if (
+            candlestickSeries &&
+            ohlcHistory.length > 0
+        ) {
+            candlestickSeries.setData(
+                ohlcHistory
+            );
+        }
+
+        if (
+            barSeries &&
+            ohlcHistory.length > 0
+        ) {
+            barSeries.setData(
+                ohlcHistory
+            );
+        }
+
+        // ---------------------------------------------------------
+        // T+1 forecast overlay
+        // ---------------------------------------------------------
         const lastHistorical =
-            itemData.history[
-                itemData.history.length - 1
+            history[
+                history.length - 1
             ];
 
-        predictedSeries.setData([
-            lastHistorical,
+        const predictionDate =
+            itemData.prediction_date;
 
-            {
-                time:
-                    itemData.prediction_date,
+        if (
+            lastHistorical &&
+            predictionDate &&
+            itemData.target_price_t1 !== undefined &&
+            itemData.target_price_t1 !== null
+        ) {
 
-                value:
-                    itemData.target_price_t1
-            }
-        ]);
+            predictedSeries.setData([
+                {
+                    time:
+                        lastHistorical.time,
+
+                    value:
+                        Number(
+                            lastHistorical.value
+                        )
+                },
+
+                {
+                    time:
+                        predictionDate,
+
+                    value:
+                        Number(
+                            itemData.target_price_t1
+                        )
+                }
+            ]);
+
+        } else {
+
+            predictedSeries.setData([]);
+        }
+
+        // ---------------------------------------------------------
+        // Forecast direction color
+        // ---------------------------------------------------------
+        const isLight =
+            document.body.classList.contains(
+                'light-theme'
+            );
 
         const trendColor =
-            itemData.target_price_t1 >=
-            lastHistorical.value
-                ? '#10b981'
-                : '#f43f5e';
+            Number(
+                itemData.target_price_t1
+            ) >= Number(
+                lastHistorical.value
+            )
+                ? (
+                    isLight
+                        ? '#0f8a68'
+                        : '#10b981'
+                )
+                : (
+                    isLight
+                        ? '#d63b55'
+                        : '#f43f5e'
+                );
 
         predictedSeries.applyOptions({
-            color: trendColor
+            color: trendColor,
+            lineWidth: 2,
+            lineStyle:
+                LightweightCharts
+                    .LineStyle
+                    .Dotted,
+            visible: true
         });
+
+        // Keep the user's selected chart type after
+        // switching to another stock.
+        applyChartType(
+            currentChartType
+        );
 
         requestAnimationFrame(() => {
             resizeChartCanvas();
         });
     }
+
 });
