@@ -6,6 +6,7 @@ import pandas as pd
 import yfinance as yf
 from sklearn.linear_model import LinearRegression
 from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
 
 
 logger = logging.getLogger("quant_terminal")
@@ -16,7 +17,11 @@ class PortfolioMLEngine:
     Quantitative Machine Learning Pipeline for Indian Stock Portfolios.
 
     - Streams historical 1D daily price data via yfinance.
-    - Trains regression models (Linear Baseline, XGBoost, or Trend Proxy).
+    - Trains regression models:
+        * Linear Regression
+        * XGBoost
+        * LightGBM
+        * Trend Proxy
     - Calculates T+1 NAV targets, portfolio Alpha yield, and average R² confidence.
     - Generates historical chart data for frontend visualization.
     """
@@ -321,14 +326,10 @@ class PortfolioMLEngine:
                     4
                 ),
 
-                # -------------------------------------------------
-                # NEW: Chart data
-                # -------------------------------------------------
+                # Chart data
                 "history": history,
 
-                # -------------------------------------------------
-                # NEW: T+1 chart prediction date
-                # -------------------------------------------------
+                # T+1 chart prediction date
                 "prediction_date": prediction_date
             })
 
@@ -454,6 +455,7 @@ class PortfolioMLEngine:
         })
 
         df["lag_1"] = df["close"].shift(1)
+
         df["lag_2"] = df["close"].shift(2)
 
         df["sma_5"] = (
@@ -517,6 +519,38 @@ class PortfolioMLEngine:
                 max_depth=3,
                 learning_rate=0.08,
                 random_state=42
+            )
+
+            model.fit(
+                X_train,
+                y_train
+            )
+
+            pred_t1 = float(
+                model.predict(latest_features)[0]
+            )
+
+            r2 = (
+                float(model.score(X_test, y_test))
+                if len(X_test) > 2
+                else float(model.score(X_train, y_train))
+            )
+
+        # ---------------------------------------------------------
+        # LightGBM
+        # ---------------------------------------------------------
+        elif self.model_type == "lightgbm":
+
+            model = LGBMRegressor(
+                n_estimators=100,
+                learning_rate=0.05,
+                max_depth=3,
+                num_leaves=15,
+                min_child_samples=10,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                verbosity=-1
             )
 
             model.fit(
