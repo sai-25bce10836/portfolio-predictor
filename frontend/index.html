@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ProFolio Terminal | Institutional Quant ML Analytics</title>
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -36,12 +36,37 @@
             }
         }
     </script>
-    
+
     <!-- TradingView Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
-    
+
     <style>
-        /* Custom scrollbar for terminal UI */
+        /* =========================================================
+           Theme Transition
+           ========================================================= */
+
+        html,
+        body,
+        header,
+        aside,
+        main,
+        footer,
+        button,
+        input,
+        select,
+        .glass-panel {
+            transition:
+                background-color 220ms ease,
+                border-color 220ms ease,
+                color 220ms ease,
+                box-shadow 220ms ease;
+        }
+
+
+        /* =========================================================
+           Custom scrollbar for terminal UI
+           ========================================================= */
+
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -60,11 +85,20 @@
             background: #475569;
         }
 
+
+        /* =========================================================
+           TradingView chart
+           ========================================================= */
+
         #tv-chart canvas {
             display: block !important;
         }
 
-        /* Scenario modal */
+
+        /* =========================================================
+           Scenario modal
+           ========================================================= */
+
         #scenario-modal {
             transition: opacity 180ms ease;
         }
@@ -84,24 +118,460 @@
             opacity: 0;
         }
 
-        /* Prevent page scroll while scenario modal is active */
+
+        /* =========================================================
+           Prevent page scroll while scenario modal is active
+           ========================================================= */
+
         body.scenario-modal-open {
             overflow: hidden;
+        }
+
+
+        /* =========================================================
+           Theme Toggle
+           ========================================================= */
+
+        #theme-toggle {
+            position: relative;
+            overflow: hidden;
+        }
+
+        #theme-toggle .theme-icon {
+            transition:
+                transform 220ms ease,
+                opacity 180ms ease;
+        }
+
+        #theme-toggle .sun-icon {
+            opacity: 0;
+            transform: rotate(-45deg) scale(0.7);
+            position: absolute;
+        }
+
+        #theme-toggle .moon-icon {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+
+        /* Light mode icon state */
+        body.light-theme #theme-toggle .sun-icon {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+
+        body.light-theme #theme-toggle .moon-icon {
+            opacity: 0;
+            transform: rotate(45deg) scale(0.7);
+        }
+
+
+        /* =========================================================
+           Light Theme - Main Layout
+           ========================================================= */
+
+        body.light-theme {
+            background-color: #f5f6f8 !important;
+            color: #182230 !important;
+        }
+
+        body.light-theme header {
+            background-color: rgba(255, 255, 255, 0.92) !important;
+            border-color: #dfe3e8 !important;
+        }
+
+        body.light-theme aside {
+            background-color: rgba(255, 255, 255, 0.78) !important;
+            border-color: #dfe3e8 !important;
+        }
+
+        body.light-theme main {
+            background-color: #f5f6f8 !important;
+        }
+
+        body.light-theme footer {
+            background-color: #ffffff !important;
+            border-color: #dfe3e8 !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Header
+           ========================================================= */
+
+        body.light-theme .bg-slate-900\/90 {
+            background-color: rgba(255, 255, 255, 0.92) !important;
+        }
+
+        body.light-theme .bg-slate-950 {
+            background-color: #f5f6f8 !important;
+        }
+
+        body.light-theme header .text-slate-100,
+        body.light-theme header .text-white {
+            color: #182230 !important;
+        }
+
+        body.light-theme header .text-slate-300 {
+            color: #475467 !important;
+        }
+
+        body.light-theme header .text-slate-400 {
+            color: #667085 !important;
+        }
+
+        body.light-theme header .bg-slate-800 {
+            background-color: #eef1f5 !important;
+        }
+
+        body.light-theme header .border-slate-800 {
+            border-color: #dfe3e8 !important;
+        }
+
+        body.light-theme header .border-slate-700\/50 {
+            border-color: #d5dae2 !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Navigation
+           ========================================================= */
+
+        body.light-theme nav.bg-slate-950 {
+            background-color: #f0f2f5 !important;
+            border-color: #dfe3e8 !important;
+        }
+
+        body.light-theme .nav-tab.active {
+            background-color: #ffffff !important;
+            color: #182230 !important;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+        }
+
+        body.light-theme .nav-tab:not(.active) {
+            color: #667085 !important;
+        }
+
+        body.light-theme .nav-tab:not(.active):hover {
+            color: #182230 !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Sidebar
+           ========================================================= */
+
+        body.light-theme aside .border-slate-800 {
+            border-color: #dfe3e8 !important;
+        }
+
+        body.light-theme aside .border-slate-800\/80 {
+            border-color: #e4e7ec !important;
+        }
+
+        body.light-theme aside .text-slate-400 {
+            color: #667085 !important;
+        }
+
+        body.light-theme aside .text-slate-300 {
+            color: #475467 !important;
+        }
+
+        body.light-theme aside .text-slate-500 {
+            color: #7b8492 !important;
+        }
+
+        body.light-theme aside .bg-slate-950 {
+            background-color: #ffffff !important;
+        }
+
+        body.light-theme aside .bg-slate-800 {
+            background-color: #eef1f5 !important;
+        }
+
+        body.light-theme aside .hover\:bg-slate-700:hover {
+            background-color: #e4e7ec !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Inputs & Selects
+           ========================================================= */
+
+        body.light-theme input,
+        body.light-theme select {
+            background-color: #ffffff !important;
+            color: #182230 !important;
+            border-color: #d5dae2 !important;
+        }
+
+        body.light-theme input::placeholder {
+            color: #8a93a1 !important;
+        }
+
+        body.light-theme input:focus,
+        body.light-theme select:focus {
+            border-color: #315bb5 !important;
+        }
+
+        body.light-theme option {
+            background-color: #ffffff;
+            color: #182230;
+        }
+
+
+        /* =========================================================
+           Light Theme - Main Metric Cards
+           ========================================================= */
+
+        body.light-theme main .bg-slate-900 {
+            background-color: #ffffff !important;
+            border-color: #dfe3e8 !important;
+        }
+
+        body.light-theme main .text-slate-100 {
+            color: #182230 !important;
+        }
+
+        body.light-theme main .text-slate-400 {
+            color: #667085 !important;
+        }
+
+        body.light-theme main .text-slate-500 {
+            color: #7b8492 !important;
+        }
+
+        body.light-theme main .text-blue-400 {
+            color: #315bb5 !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Blue Forecast Card
+           ========================================================= */
+
+        body.light-theme main .bg-blue-950\/10 {
+            background-color: #eef4ff !important;
+        }
+
+        body.light-theme main .border-blue-500\/30 {
+            border-color: #b8ccef !important;
+        }
+
+        body.light-theme main .text-blue-400 {
+            color: #315bb5 !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Chart/Table Container
+           ========================================================= */
+
+        body.light-theme #chart-section,
+        body.light-theme #results-section {
+            background-color: #ffffff;
+        }
+
+        body.light-theme #tv-chart {
+            background-color: #f8f9fb !important;
+        }
+
+        body.light-theme #btn-show-chart {
+            background-color: #eef1f5 !important;
+            color: #182230 !important;
+            border-color: #d5dae2 !important;
+        }
+
+        body.light-theme #btn-show-table {
+            color: #667085 !important;
+        }
+
+        body.light-theme #btn-show-table:hover {
+            color: #182230 !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Table
+           ========================================================= */
+
+        body.light-theme #results-section table {
+            color: #344054;
+        }
+
+        body.light-theme #results-section thead tr {
+            border-color: #dfe3e8 !important;
+            color: #667085 !important;
+        }
+
+        body.light-theme #results-body {
+            color: #344054 !important;
+        }
+
+        body.light-theme #results-body tr {
+            border-color: #eaecf0 !important;
+        }
+
+        body.light-theme #results-body tr:hover {
+            background-color: #f6f8fa !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Scenario Launcher
+           ========================================================= */
+
+        body.light-theme #open-scenario-btn {
+            background-color: #ffffff !important;
+            color: #344054 !important;
+            border-color: #d5dae2 !important;
+        }
+
+        body.light-theme #open-scenario-btn:hover {
+            background-color: #eef1f5 !important;
+            color: #182230 !important;
+            border-color: #9bb3e5 !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Scenario Modal
+           ========================================================= */
+
+        body.light-theme #scenario-modal {
+            background-color: rgba(15, 23, 42, 0.32) !important;
+        }
+
+        body.light-theme #scenario-modal-panel {
+            background-color: #ffffff !important;
+            border-color: #d5dae2 !important;
+            box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18) !important;
+        }
+
+        body.light-theme #scenario-modal-panel .bg-slate-900\/95 {
+            background-color: rgba(255, 255, 255, 0.96) !important;
+        }
+
+        body.light-theme #scenario-modal-panel .border-slate-800 {
+            border-color: #dfe3e8 !important;
+        }
+
+        body.light-theme #scenario-modal-panel .text-slate-100,
+        body.light-theme #scenario-modal-panel .text-slate-200 {
+            color: #182230 !important;
+        }
+
+        body.light-theme #scenario-modal-panel .text-slate-400 {
+            color: #667085 !important;
+        }
+
+        body.light-theme #scenario-modal-panel .text-slate-500 {
+            color: #7b8492 !important;
+        }
+
+        body.light-theme #scenario-modal-panel .bg-slate-950\/70 {
+            background-color: #f8f9fb !important;
+        }
+
+        body.light-theme #scenario-modal-panel .bg-blue-950\/40 {
+            background-color: #eef4ff !important;
+        }
+
+        body.light-theme #scenario-modal-panel .border-blue-800\/50 {
+            border-color: #b8ccef !important;
+        }
+
+        body.light-theme #scenario-modal-panel .text-blue-400 {
+            color: #315bb5 !important;
+        }
+
+        body.light-theme #scenario-modal-panel .bg-blue-950\/20 {
+            background-color: #f0f5ff !important;
+        }
+
+        body.light-theme #scenario-modal-panel .border-blue-900\/40 {
+            border-color: #c5d5f2 !important;
+        }
+
+        body.light-theme #scenario-modal-panel .bg-slate-800 {
+            background-color: #eef1f5 !important;
+        }
+
+        body.light-theme #scenario-modal-panel .border-slate-700 {
+            border-color: #d5dae2 !important;
+        }
+
+        body.light-theme #scenario-modal-panel .text-slate-400:hover,
+        body.light-theme #scenario-modal-panel .hover\:text-white:hover {
+            color: #182230 !important;
+        }
+
+        body.light-theme #scenario-modal-panel .hover\:bg-slate-700:hover {
+            background-color: #e4e7ec !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Footer
+           ========================================================= */
+
+        body.light-theme footer .text-slate-400 {
+            color: #667085 !important;
+        }
+
+        body.light-theme footer .text-amber-400 {
+            color: #b7791f !important;
+        }
+
+
+        /* =========================================================
+           Light Theme - Scrollbar
+           ========================================================= */
+
+        body.light-theme ::-webkit-scrollbar-track {
+            background: #f5f6f8;
+        }
+
+        body.light-theme ::-webkit-scrollbar-thumb {
+            background: #cbd1d9;
+        }
+
+        body.light-theme ::-webkit-scrollbar-thumb:hover {
+            background: #aeb6c1;
+        }
+
+
+        /* =========================================================
+           Mobile Theme Toggle
+           ========================================================= */
+
+        @media (max-width: 640px) {
+            #theme-toggle {
+                width: 38px;
+                height: 38px;
+            }
         }
     </style>
 </head>
 
 <body class="h-full font-sans bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-blue-500 selection:text-white">
 
-    <!-- Terminal Header -->
+    <!-- =========================================================
+         Terminal Header
+         ========================================================= -->
+
     <header class="h-14 border-b border-slate-800 bg-slate-900/90 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
+
+        <!-- Brand -->
         <div class="flex items-center gap-3">
+
             <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white font-mono shadow-lg shadow-blue-500/20">
                 P
             </div>
 
             <div>
                 <div class="flex items-center gap-2">
+
                     <h1 class="font-bold tracking-tight text-sm text-slate-100">
                         ProFolio <span class="text-blue-500 font-normal">Terminal</span>
                     </h1>
@@ -110,11 +580,15 @@
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         Engine Ready
                     </span>
+
                 </div>
             </div>
         </div>
 
+
+        <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-medium text-slate-400">
+
             <button class="nav-tab active px-3 py-1.5 rounded-md text-white bg-slate-800 transition" data-tab="terminal">
                 Portfolio Analytics
             </button>
@@ -126,13 +600,68 @@
             <button class="nav-tab px-3 py-1.5 rounded-md hover:text-slate-200 transition" data-tab="model">
                 Model Confidence (R²)
             </button>
+
         </nav>
 
-        <div class="flex items-center gap-3">
-            <span class="text-[11px] font-mono bg-slate-800/80 text-slate-300 px-2.5 py-1 rounded border border-slate-700/50">
+
+        <!-- Header Controls -->
+        <div class="flex items-center gap-2 sm:gap-3">
+
+            <span class="hidden sm:inline-flex text-[11px] font-mono bg-slate-800/80 text-slate-300 px-2.5 py-1 rounded border border-slate-700/50">
                 NSE/BSE: LIVE
             </span>
 
+
+            <!-- Theme Toggle -->
+            <button
+                id="theme-toggle"
+                type="button"
+                class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-slate-800 bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700 transition flex items-center justify-center"
+                aria-label="Switch to light theme"
+                title="Switch to light theme"
+            >
+
+                <!-- Moon Icon -->
+                <svg
+                    class="theme-icon moon-icon w-4 h-4 sm:w-5 sm:h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+                    />
+                </svg>
+
+                <!-- Sun Icon -->
+                <svg
+                    class="theme-icon sun-icon w-4 h-4 sm:w-5 sm:h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                >
+                    <circle
+                        cx="12"
+                        cy="12"
+                        r="4"
+                        stroke-width="2"
+                    />
+                    <path
+                        stroke-linecap="round"
+                        stroke-width="2"
+                        d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
+                    />
+                </svg>
+
+            </button>
+
+
+            <!-- Reset Workspace -->
             <button
                 id="reset-layout-btn"
                 class="p-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition"
@@ -142,22 +671,30 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
             </button>
+
         </div>
+
     </header>
 
-    <!-- Main Workspace -->
+
+    <!-- =========================================================
+         Main Workspace
+         ========================================================= -->
+
     <div class="flex-1 flex overflow-hidden">
-        
+
         <!-- Sidebar: Broker Connect & ML Controls -->
         <aside class="w-80 border-r border-slate-800 bg-slate-900/50 flex flex-col shrink-0 overflow-y-auto">
-            
+
             <!-- Broker Authentication Card -->
             <div class="p-4 border-b border-slate-800">
+
                 <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
                     Upstox Synchronization
                 </h3>
 
                 <div id="upstox-panel" class="space-y-3">
+
                     <button
                         id="upstox-login-btn"
                         type="button"
@@ -168,8 +705,9 @@
                         </svg>
                         Connect via Upstox OAuth
                     </button>
-                    
+
                     <div class="relative">
+
                         <label for="upstox-token-input" class="block text-[11px] font-mono text-slate-400 mb-1">
                             Access Token
                         </label>
@@ -180,17 +718,23 @@
                             placeholder="Paste access_token or login above"
                             class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500 transition"
                         >
+
                     </div>
+
                 </div>
+
             </div>
+
 
             <!-- ML Engine Parameters -->
             <div class="p-4 border-b border-slate-800 space-y-4">
+
                 <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">
                     ML Forecast Configuration
                 </h3>
-                
+
                 <div>
+
                     <label for="model-type-select" class="block text-xs font-medium text-slate-300 mb-1.5">
                         Regression Algorithm
                     </label>
@@ -204,9 +748,12 @@
                         <option value="lightgbm">LightGBM (Gradient Boosting)</option>
                         <option value="trend">Exponential Trend Proxy</option>
                     </select>
+
                 </div>
 
+
                 <div>
+
                     <label for="lookback-days-select" class="block text-xs font-medium text-slate-300 mb-1.5">
                         Lookback Window (Days)
                     </label>
@@ -220,7 +767,9 @@
                         <option value="180">180 Days (Semi-Annual)</option>
                         <option value="365">365 Days (Full Year)</option>
                     </select>
+
                 </div>
+
 
                 <button
                     id="analyze-btn"
@@ -229,12 +778,17 @@
                     <span id="btn-spinner" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin hidden"></span>
                     <span id="btn-text">Execute T+1 Forecast Engine</span>
                 </button>
+
             </div>
+
 
             <!-- Custom Manual Input Fallback -->
             <div class="p-4 flex-1 flex flex-col justify-between">
+
                 <div>
+
                     <div class="flex items-center justify-between mb-2">
+
                         <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">
                             Manual Asset Override
                         </h3>
@@ -242,11 +796,14 @@
                         <button id="add-btn" class="text-xs text-blue-400 hover:text-blue-300 font-medium">
                             + Add Symbol
                         </button>
+
                     </div>
+
 
                     <div id="portfolio-list" class="space-y-2 max-h-48 overflow-y-auto pr-1 mb-3">
                         <!-- Dynamic Manual Rows Inserted Here -->
                     </div>
+
 
                     <button
                         id="manual-analyze-btn"
@@ -254,23 +811,34 @@
                     >
                         <span id="manual-btn-text">Forecast Manual Portfolio</span>
                     </button>
+
                 </div>
 
+
                 <div class="pt-4 border-t border-slate-800/80">
+
                     <span class="text-[10px] text-slate-500 block font-mono">
                         STATELESS PIPELINE: Zero user data or API keys are stored on server disk.
                     </span>
+
                 </div>
+
             </div>
+
         </aside>
 
-        <!-- Main Content & Charts -->
+
+        <!-- =====================================================
+             Main Content & Charts
+             ===================================================== -->
+
         <main class="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-y-auto p-4 space-y-4">
-            
+
             <!-- Metric Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+
                     <span class="text-xs font-medium text-slate-400">
                         Total Current Portfolio NAV
                     </span>
@@ -282,9 +850,12 @@
                     <span class="text-[11px] text-slate-500 mt-2">
                         Base Valuation
                     </span>
+
                 </div>
 
+
                 <div class="bg-slate-900 border border-blue-500/30 bg-blue-950/10 rounded-xl p-4 flex flex-col justify-between">
+
                     <span class="text-xs font-medium text-blue-400">
                         Projected Portfolio NAV (T+1)
                     </span>
@@ -296,9 +867,12 @@
                     <span class="text-[11px] text-slate-400 mt-2">
                         ML Model Forecast Target
                     </span>
+
                 </div>
 
+
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+
                     <span class="text-xs font-medium text-slate-400">
                         Alpha / Expected Variance
                     </span>
@@ -310,9 +884,12 @@
                     <span class="text-[11px] text-slate-500 mt-2">
                         Projected Portfolio Return
                     </span>
+
                 </div>
 
+
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+
                     <span class="text-xs font-medium text-slate-400">
                         Model Confidence (Avg R²)
                     </span>
@@ -324,16 +901,20 @@
                     <span class="text-[11px] text-slate-500 mt-2">
                         Statistical Fit Quality
                     </span>
+
                 </div>
+
             </div>
+
 
             <!-- Chart & Table Viewport -->
             <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl flex flex-col min-h-[460px] overflow-hidden">
-                
+
                 <!-- Viewport Control Bar -->
                 <div class="h-12 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 bg-slate-900/80">
 
                     <div class="flex items-center gap-2">
+
                         <button
                             id="btn-show-chart"
                             data-tab="chart"
@@ -349,9 +930,12 @@
                         >
                             Positions Breakdown
                         </button>
+
                     </div>
 
-                    <div class="flex items-center gap-4 text-xs font-mono">
+
+                    <div class="hidden sm:flex items-center gap-4 text-xs font-mono">
+
                         <span class="flex items-center gap-1.5 text-slate-400">
                             <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                             Historical Close
@@ -361,13 +945,19 @@
                             <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
                             Forecast Target
                         </span>
+
                     </div>
+
                 </div>
+
 
                 <!-- Chart View -->
                 <div id="chart-section" class="flex-1 p-4 flex flex-col min-h-[380px]">
+
                     <div class="flex items-center justify-between mb-3 shrink-0">
+
                         <div>
+
                             <h3 id="chart-title" class="text-sm font-semibold text-slate-200">
                                 Select a holding to inspect price trajectory
                             </h3>
@@ -375,7 +965,9 @@
                             <span class="text-xs text-slate-500">
                                 Daily Close vs Machine Learning Prediction
                             </span>
+
                         </div>
+
 
                         <span
                             id="chart-accuracy"
@@ -383,41 +975,61 @@
                         >
                             R²: --
                         </span>
+
                     </div>
+
 
                     <div
                         id="tv-chart"
                         class="flex-1 w-full h-[340px] min-h-[340px] relative rounded-lg overflow-hidden bg-slate-950/50"
                     ></div>
+
                 </div>
+
 
                 <!-- Table View -->
                 <div id="results-section" class="flex-1 p-4 overflow-x-auto overflow-y-auto hidden">
+
                     <table class="w-full text-left border-collapse text-xs font-mono">
+
                         <thead>
+
                             <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
+
                                 <th class="pb-2">Symbol</th>
                                 <th class="pb-2">Shares</th>
                                 <th class="pb-2">Market Price</th>
                                 <th class="pb-2">Predicted (T+1)</th>
                                 <th class="pb-2">Expected Δ</th>
                                 <th class="pb-2">Confidence (R²)</th>
+
                             </tr>
+
                         </thead>
 
+
                         <tbody id="results-body" class="divide-y divide-slate-800/60 text-slate-200">
+
                             <tr>
+
                                 <td colspan="6" class="py-8 text-center text-slate-500">
                                     No portfolio data synchronized. Authenticate broker or execute forecast.
                                 </td>
+
                             </tr>
+
                         </tbody>
+
                     </table>
+
                 </div>
+
             </div>
+
 
             <!-- Scenario Launcher -->
             <div class="flex items-center justify-center py-1">
+
                 <button
                     id="open-scenario-btn"
                     type="button"
@@ -425,13 +1037,17 @@
                 >
                     Re-calculate Scenario
                 </button>
+
             </div>
+
         </main>
+
     </div>
 
-    <!-- ========================================================= -->
-    <!-- PORTFOLIO SCENARIO MODAL                                  -->
-    <!-- ========================================================= -->
+
+    <!-- =========================================================
+         PORTFOLIO SCENARIO MODAL
+         ========================================================= -->
 
     <div
         id="scenario-modal"
@@ -452,13 +1068,17 @@
             <div class="px-6 py-5 border-b border-slate-800 bg-slate-900/95 flex items-start justify-between shrink-0">
 
                 <div>
+
                     <div class="flex items-center gap-2 mb-1">
+
                         <span class="w-2 h-2 rounded-full bg-blue-500 shadow-lg shadow-blue-500/40"></span>
 
                         <span class="text-[10px] font-mono font-semibold tracking-[0.18em] text-blue-400 uppercase">
                             Scenario Analysis
                         </span>
+
                     </div>
+
 
                     <h2
                         id="scenario-modal-title"
@@ -467,10 +1087,13 @@
                         Portfolio Scenario Stress Test
                     </h2>
 
+
                     <p class="text-xs sm:text-sm text-slate-400 mt-1">
                         Simulate hypothetical portfolio NAV changes without modifying the ML engine's actual forecast.
                     </p>
+
                 </div>
+
 
                 <!-- Close Button -->
                 <button
@@ -480,11 +1103,15 @@
                     aria-label="Close scenario analysis"
                     title="Close"
                 >
+
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M18 6L6 18"/>
                     </svg>
+
                 </button>
+
             </div>
+
 
             <!-- Modal Body -->
             <div class="flex-1 overflow-y-auto p-6">
@@ -495,7 +1122,9 @@
                     <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-5">
 
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+
                             <div>
+
                                 <h3 class="text-sm font-semibold text-slate-200">
                                     Scenario Return Shift
                                 </h3>
@@ -503,7 +1132,9 @@
                                 <p class="text-xs text-slate-500 mt-1">
                                     Adjust the hypothetical T+1 portfolio outcome.
                                 </p>
+
                             </div>
+
 
                             <div
                                 id="slider-value"
@@ -511,9 +1142,12 @@
                             >
                                 0% Shift
                             </div>
+
                         </div>
 
+
                         <div class="px-2">
+
                             <input
                                 type="range"
                                 id="weight-slider"
@@ -524,14 +1158,18 @@
                                 class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
                             >
 
+
                             <div class="flex justify-between mt-2 text-[10px] font-mono text-slate-500">
                                 <span>-20%</span>
                                 <span>0%</span>
                                 <span>+20%</span>
                             </div>
+
                         </div>
 
+
                         <div class="flex justify-end mt-5">
+
                             <button
                                 id="simulate-btn"
                                 type="button"
@@ -539,13 +1177,17 @@
                             >
                                 Re-calculate Scenario
                             </button>
+
                         </div>
+
                     </div>
+
 
                     <!-- Scenario Results -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 
                         <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+
                             <span class="text-[11px] uppercase tracking-wider text-slate-500">
                                 Current NAV
                             </span>
@@ -556,9 +1198,12 @@
                             >
                                 ₹0.00
                             </div>
+
                         </div>
 
+
                         <div class="bg-slate-950/70 border border-blue-500/20 rounded-xl p-4">
+
                             <span class="text-[11px] uppercase tracking-wider text-blue-400">
                                 Base ML Forecast
                             </span>
@@ -569,9 +1214,12 @@
                             >
                                 ₹0.00
                             </div>
+
                         </div>
 
+
                         <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+
                             <span class="text-[11px] uppercase tracking-wider text-slate-500">
                                 Scenario NAV
                             </span>
@@ -582,9 +1230,12 @@
                             >
                                 ₹0.00
                             </div>
+
                         </div>
 
+
                         <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+
                             <span class="text-[11px] uppercase tracking-wider text-slate-500">
                                 Scenario Impact
                             </span>
@@ -595,14 +1246,19 @@
                             >
                                 ₹0.00
                             </div>
+
                         </div>
+
                     </div>
+
 
                     <!-- Scenario Return -->
                     <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-5">
 
                         <div class="flex items-center justify-between gap-4">
+
                             <div>
+
                                 <span class="text-[11px] uppercase tracking-wider text-slate-500">
                                     Total Scenario Return vs Current NAV
                                 </span>
@@ -610,7 +1266,9 @@
                                 <p class="text-xs text-slate-500 mt-1">
                                     Hypothetical portfolio outcome relative to the current valuation.
                                 </p>
+
                             </div>
+
 
                             <div
                                 id="scenario-return"
@@ -618,8 +1276,11 @@
                             >
                                 0.00%
                             </div>
+
                         </div>
+
                     </div>
+
 
                     <!-- Status / Explanation -->
                     <div
@@ -630,23 +1291,40 @@
                     </div>
 
                 </div>
+
             </div>
+
         </div>
+
     </div>
 
-    <!-- Warning / Disclaimer Footer -->
+
+    <!-- =========================================================
+         Warning / Disclaimer Footer
+         ========================================================= -->
+
     <footer class="h-8 border-t border-slate-800 bg-slate-950 px-4 flex items-center justify-between text-[11px] text-slate-400 shrink-0 font-mono">
+
         <div class="truncate">
-            <span class="text-amber-400 font-semibold">SEBI COMPLIANCE DISCLAIMER:</span>
+
+            <span class="text-amber-400 font-semibold">
+                SEBI COMPLIANCE DISCLAIMER:
+            </span>
+
             Quantitative predictions are generated purely for research and analytical demonstration. They do not constitute financial advice or market guarantees.
+
         </div>
+
 
         <div class="hidden sm:block text-slate-400">
             v1.0.0 | Stateless Quantitative Terminal
         </div>
+
     </footer>
+
 
     <!-- Frontend Script -->
     <script src="script.js"></script>
+
 </body>
 </html>

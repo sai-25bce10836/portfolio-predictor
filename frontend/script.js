@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsSection = document.getElementById('results-section');
     const resetLayoutBtn = document.getElementById('reset-layout-btn');
 
+    // Theme Toggle
+    const themeToggle = document.getElementById('theme-toggle');
+
     // Scenario Modal Elements
     const openScenarioBtn = document.getElementById('open-scenario-btn');
     const closeScenarioBtn = document.getElementById('close-scenario-btn');
@@ -47,6 +50,110 @@ document.addEventListener('DOMContentLoaded', () => {
     let lineSeries = null;
     let predictedSeries = null;
 
+    // =========================================================
+    // THEME MANAGEMENT
+    // =========================================================
+
+    function applyTheme(theme) {
+        const isLight = theme === 'light';
+
+        document.body.classList.toggle('light-theme', isLight);
+
+        const root = document.documentElement;
+        root.classList.toggle('dark', !isLight);
+        root.classList.toggle('light', isLight);
+
+        if (themeToggle) {
+            themeToggle.setAttribute(
+                'aria-label',
+                isLight ? 'Switch to dark theme' : 'Switch to light theme'
+            );
+
+            themeToggle.setAttribute(
+                'title',
+                isLight ? 'Switch to dark theme' : 'Switch to light theme'
+            );
+        }
+
+        localStorage.setItem(
+            'profolio-theme',
+            isLight ? 'light' : 'dark'
+        );
+
+        // Keep the TradingView chart visually consistent with the selected theme.
+        if (chart) {
+            const chartColors = isLight
+                ? {
+                    background: '#f8f9fb',
+                    text: '#475467',
+                    grid: '#e4e7ec',
+                    border: '#cbd1d9'
+                }
+                : {
+                    background: '#0f172a',
+                    text: '#94a3b8',
+                    grid: '#1e293b',
+                    border: '#334155'
+                };
+
+            chart.applyOptions({
+                layout: {
+                    background: {
+                        type: 'solid',
+                        color: chartColors.background
+                    },
+                    textColor: chartColors.text
+                },
+
+                grid: {
+                    vertLines: {
+                        color: chartColors.grid
+                    },
+
+                    horzLines: {
+                        color: chartColors.grid
+                    }
+                },
+
+                timeScale: {
+                    borderColor: chartColors.border
+                },
+
+                rightPriceScale: {
+                    borderColor: chartColors.border
+                }
+            });
+        }
+    }
+
+    function initializeTheme() {
+        const savedTheme =
+            localStorage.getItem('profolio-theme');
+
+        // Dark remains the default theme.
+        applyTheme(
+            savedTheme === 'light'
+                ? 'light'
+                : 'dark'
+        );
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+
+            const isCurrentlyLight =
+                document.body.classList.contains('light-theme');
+
+            applyTheme(
+                isCurrentlyLight
+                    ? 'dark'
+                    : 'light'
+            );
+        });
+    }
+
+    initializeTheme();
+
     // Currency Formatter
     const formatINR = (val) => new Intl.NumberFormat('en-IN', {
         style: 'currency',
@@ -55,21 +162,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Direct Input Extraction Helper ---
     function getManualInputs() {
+
         if (!portfolioList) return [];
 
         const items = [];
-        const rows = portfolioList.querySelectorAll('.portfolio-row');
+
+        const rows =
+            portfolioList.querySelectorAll(
+                '.portfolio-row'
+            );
 
         rows.forEach(row => {
-            const symInput = row.querySelector('.sym-input, input[type="text"]');
-            const shareInput = row.querySelector('.share-input, input[type="number"]');
 
-            const rawSymbol = symInput && symInput.value ? symInput.value.trim() : '';
+            const symInput =
+                row.querySelector(
+                    '.sym-input, input[type="text"]'
+                );
+
+            const shareInput =
+                row.querySelector(
+                    '.share-input, input[type="number"]'
+                );
+
+            const rawSymbol =
+                symInput && symInput.value
+                    ? symInput.value.trim()
+                    : '';
 
             if (rawSymbol !== '') {
-                const sharesVal = shareInput
-                    ? (parseFloat(shareInput.value) || 1)
-                    : 1;
+
+                const sharesVal =
+                    shareInput
+                        ? (parseFloat(shareInput.value) || 1)
+                        : 1;
 
                 items.push({
                     symbol: rawSymbol.toUpperCase(),
@@ -81,29 +206,51 @@ document.addEventListener('DOMContentLoaded', () => {
         return items;
     }
 
-    // --- OAuth Callback Handler ---
+    // =========================================================
+    // OAUTH CALLBACK HANDLER
+    // =========================================================
+
     async function handleOAuthCallback() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const authCode = urlParams.get('code');
+
+        const urlParams =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const authCode =
+            urlParams.get('code');
 
         if (authCode) {
-            if (btnText) btnText.innerText = "Exchanging Upstox Token...";
-            if (btnSpinner) btnSpinner.classList.remove('hidden');
+
+            if (btnText) {
+                btnText.innerText =
+                    "Exchanging Upstox Token...";
+            }
+
+            if (btnSpinner) {
+                btnSpinner.classList.remove('hidden');
+            }
 
             try {
+
                 const response = await fetch(
                     `${API_BASE_URL}/api/v1/auth/upstox/callback?code=${encodeURIComponent(authCode)}`
                 );
 
                 if (!response.ok) {
-                    throw new Error("Failed to exchange Upstox authorization code.");
+                    throw new Error(
+                        "Failed to exchange Upstox authorization code."
+                    );
                 }
 
-                const data = await response.json();
+                const data =
+                    await response.json();
 
                 if (data.access_token) {
+
                     if (upstoxTokenInput) {
-                        upstoxTokenInput.value = data.access_token;
+                        upstoxTokenInput.value =
+                            data.access_token;
                     }
 
                     window.history.replaceState(
@@ -116,59 +263,102 @@ document.addEventListener('DOMContentLoaded', () => {
                         "Upstox OAuth login successful! Click 'Execute T+1 Forecast Engine' to run analytics."
                     );
                 }
+
             } catch (err) {
-                alert(`OAuth Error: ${err.message}`);
+
+                alert(
+                    `OAuth Error: ${err.message}`
+                );
+
             } finally {
-                if (btnText) btnText.innerText = "Execute T+1 Forecast Engine";
-                if (btnSpinner) btnSpinner.classList.add('hidden');
+
+                if (btnText) {
+                    btnText.innerText =
+                        "Execute T+1 Forecast Engine";
+                }
+
+                if (btnSpinner) {
+                    btnSpinner.classList.add('hidden');
+                }
             }
         }
     }
 
     handleOAuthCallback();
 
-    // --- Upstox Login Redirect ---
+    // =========================================================
+    // UPSTOX LOGIN REDIRECT
+    // =========================================================
+
     if (upstoxLoginBtn) {
-        upstoxLoginBtn.addEventListener('click', async () => {
-            try {
-                const response = await fetch(
-                    `${API_BASE_URL}/api/v1/auth/upstox/login`
-                );
 
-                if (!response.ok) {
-                    throw new Error(
-                        `Could not retrieve Upstox OAuth URL (Status: ${response.status})`
+        upstoxLoginBtn.addEventListener(
+            'click',
+            async () => {
+
+                try {
+
+                    const response =
+                        await fetch(
+                            `${API_BASE_URL}/api/v1/auth/upstox/login`
+                        );
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            `Could not retrieve Upstox OAuth URL (Status: ${response.status})`
+                        );
+                    }
+
+                    const data =
+                        await response.json();
+
+                    const authUrl =
+                        data.authorization_url ||
+                        data.url;
+
+                    if (authUrl) {
+
+                        window.location.href =
+                            authUrl;
+
+                    } else {
+
+                        throw new Error(
+                            "No authorization URL received from server."
+                        );
+                    }
+
+                } catch (err) {
+
+                    alert(
+                        `Login Redirect Error: ${err.message}`
                     );
                 }
-
-                const data = await response.json();
-
-                const authUrl = data.authorization_url || data.url;
-
-                if (authUrl) {
-                    window.location.href = authUrl;
-                } else {
-                    throw new Error(
-                        "No authorization URL received from server."
-                    );
-                }
-
-            } catch (err) {
-                alert(`Login Redirect Error: ${err.message}`);
             }
-        });
+        );
     }
 
-    // --- Safe Chart Canvas Resize Logic ---
+    // =========================================================
+    // SAFE CHART CANVAS RESIZE LOGIC
+    // =========================================================
+
     function resizeChartCanvas() {
-        const chartContainer = document.getElementById('tv-chart');
+
+        const chartContainer =
+            document.getElementById(
+                'tv-chart'
+            );
 
         if (chartContainer && chart) {
-            const width = chartContainer.clientWidth || 600;
 
-            const height = chartContainer.clientHeight > 0
-                ? chartContainer.clientHeight
-                : 340;
+            const width =
+                chartContainer.clientWidth || 600;
+
+            const height =
+                chartContainer.clientHeight > 0
+                    ? chartContainer.clientHeight
+                    : 340;
 
             chart.applyOptions({
                 width,
@@ -179,9 +369,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- TradingView Lightweight Charts Setup ---
+    // =========================================================
+    // TRADINGVIEW LIGHTWEIGHT CHARTS SETUP
+    // =========================================================
+
     function initChart() {
-        const chartContainer = document.getElementById('tv-chart');
+
+        const chartContainer =
+            document.getElementById(
+                'tv-chart'
+            );
 
         if (
             !chartContainer ||
@@ -192,69 +389,115 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chartContainer.innerHTML = '';
 
-        const initialWidth = chartContainer.clientWidth || 600;
+        const initialWidth =
+            chartContainer.clientWidth || 600;
 
-        const initialHeight = chartContainer.clientHeight > 0
-            ? chartContainer.clientHeight
-            : 340;
+        const initialHeight =
+            chartContainer.clientHeight > 0
+                ? chartContainer.clientHeight
+                : 340;
 
-        chart = LightweightCharts.createChart(chartContainer, {
-            width: initialWidth,
-            height: initialHeight,
+        const isLightTheme =
+            document.body.classList.contains(
+                'light-theme'
+            );
 
-            layout: {
-                background: {
-                    type: 'solid',
-                    color: '#0f172a'
-                },
-
-                textColor: '#94a3b8',
-                fontFamily: "'JetBrains Mono', monospace"
-            },
-
-            grid: {
-                vertLines: {
-                    color: '#1e293b'
-                },
-
-                horzLines: {
-                    color: '#1e293b'
+        const chartColors =
+            isLightTheme
+                ? {
+                    background: '#f8f9fb',
+                    text: '#475467',
+                    grid: '#e4e7ec',
+                    border: '#cbd1d9'
                 }
-            },
+                : {
+                    background: '#0f172a',
+                    text: '#94a3b8',
+                    grid: '#1e293b',
+                    border: '#334155'
+                };
 
-            crosshair: {
-                mode: LightweightCharts.CrosshairMode.Normal
-            },
+        chart =
+            LightweightCharts.createChart(
+                chartContainer,
+                {
+                    width: initialWidth,
+                    height: initialHeight,
 
-            timeScale: {
-                borderColor: '#334155',
-                timeVisible: true,
-                secondsVisible: false
-            },
+                    layout: {
+                        background: {
+                            type: 'solid',
+                            color: chartColors.background
+                        },
 
-            rightPriceScale: {
-                borderColor: '#334155'
-            }
-        });
+                        textColor:
+                            chartColors.text,
 
-        lineSeries = chart.addLineSeries({
-            color: '#3b82f6',
-            lineWidth: 2,
-            crosshairMarkerRadius: 5
-        });
+                        fontFamily:
+                            "'JetBrains Mono', monospace"
+                    },
 
-        predictedSeries = chart.addLineSeries({
-            color: '#10b981',
-            lineWidth: 2,
-            lineStyle: LightweightCharts.LineStyle.Dotted
-        });
+                    grid: {
+                        vertLines: {
+                            color: chartColors.grid
+                        },
 
-        window.addEventListener('resize', resizeChartCanvas);
+                        horzLines: {
+                            color: chartColors.grid
+                        }
+                    },
+
+                    crosshair: {
+                        mode:
+                            LightweightCharts
+                                .CrosshairMode
+                                .Normal
+                    },
+
+                    timeScale: {
+                        borderColor:
+                            chartColors.border,
+
+                        timeVisible: true,
+
+                        secondsVisible: false
+                    },
+
+                    rightPriceScale: {
+                        borderColor:
+                            chartColors.border
+                    }
+                }
+            );
+
+        lineSeries =
+            chart.addLineSeries({
+                color: '#3b82f6',
+                lineWidth: 2,
+                crosshairMarkerRadius: 5
+            });
+
+        predictedSeries =
+            chart.addLineSeries({
+                color: '#10b981',
+                lineWidth: 2,
+                lineStyle:
+                    LightweightCharts
+                        .LineStyle
+                        .Dotted
+            });
+
+        window.addEventListener(
+            'resize',
+            resizeChartCanvas
+        );
 
         if (window.ResizeObserver) {
-            const ro = new ResizeObserver(() => {
-                resizeChartCanvas();
-            });
+
+            const ro =
+                new ResizeObserver(() => {
+                    resizeChartCanvas();
+                });
 
             ro.observe(chartContainer);
         }
@@ -262,11 +505,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initChart();
 
-    // --- Manual Asset Row Injector ---
-    function addStockRow(symbol = '', shares = '') {
+    // =========================================================
+    // MANUAL ASSET ROW INJECTOR
+    // =========================================================
+
+    function addStockRow(
+        symbol = '',
+        shares = ''
+    ) {
+
         if (!portfolioList) return;
 
-        const row = document.createElement('div');
+        const row =
+            document.createElement('div');
 
         row.className =
             'portfolio-row flex items-center gap-2 mb-2';
@@ -291,7 +542,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         `;
 
-        row.querySelector('.remove-btn').addEventListener(
+        row.querySelector(
+            '.remove-btn'
+        ).addEventListener(
             'click',
             () => row.remove()
         );
@@ -300,9 +553,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            addStockRow('', '1');
-        });
+
+        addBtn.addEventListener(
+            'click',
+            () => {
+                addStockRow('', '1');
+            }
+        );
     }
 
     // Populate default initial manual rows
@@ -310,96 +567,143 @@ document.addEventListener('DOMContentLoaded', () => {
         portfolioList.innerHTML = '';
     }
 
-    addStockRow('RELIANCE.NS', '10');
-    addStockRow('TCS.NS', '5');
+    addStockRow(
+        'RELIANCE.NS',
+        '10'
+    );
 
-    // --- Navigation & Workspace Controls ---
+    addStockRow(
+        'TCS.NS',
+        '5'
+    );
+
+    // =========================================================
+    // NAVIGATION & WORKSPACE CONTROLS
+    // =========================================================
+
     if (btnShowChart && btnShowTable) {
 
-        btnShowChart.addEventListener('click', () => {
+        btnShowChart.addEventListener(
+            'click',
+            () => {
 
-            btnShowChart.classList.add(
-                'bg-slate-800',
-                'text-white',
-                'border',
-                'border-slate-700'
-            );
+                btnShowChart.classList.add(
+                    'bg-slate-800',
+                    'text-white',
+                    'border',
+                    'border-slate-700'
+                );
 
-            btnShowChart.classList.remove('text-slate-400');
+                btnShowChart.classList.remove(
+                    'text-slate-400'
+                );
 
-            btnShowTable.classList.remove(
-                'bg-slate-800',
-                'text-white',
-                'border',
-                'border-slate-700'
-            );
+                btnShowTable.classList.remove(
+                    'bg-slate-800',
+                    'text-white',
+                    'border',
+                    'border-slate-700'
+                );
 
-            btnShowTable.classList.add('text-slate-400');
+                btnShowTable.classList.add(
+                    'text-slate-400'
+                );
 
-            if (chartSection) {
-                chartSection.classList.remove('hidden');
+                if (chartSection) {
+                    chartSection.classList.remove(
+                        'hidden'
+                    );
+                }
+
+                if (resultsSection) {
+                    resultsSection.classList.add(
+                        'hidden'
+                    );
+                }
+
+                requestAnimationFrame(() => {
+                    resizeChartCanvas();
+                });
             }
+        );
 
-            if (resultsSection) {
-                resultsSection.classList.add('hidden');
+        btnShowTable.addEventListener(
+            'click',
+            () => {
+
+                btnShowTable.classList.add(
+                    'bg-slate-800',
+                    'text-white',
+                    'border',
+                    'border-slate-700'
+                );
+
+                btnShowTable.classList.remove(
+                    'text-slate-400'
+                );
+
+                btnShowChart.classList.remove(
+                    'bg-slate-800',
+                    'text-white',
+                    'border',
+                    'border-slate-700'
+                );
+
+                btnShowChart.classList.add(
+                    'text-slate-400'
+                );
+
+                if (resultsSection) {
+                    resultsSection.classList.remove(
+                        'hidden'
+                    );
+                }
+
+                if (chartSection) {
+                    chartSection.classList.add(
+                        'hidden'
+                    );
+                }
             }
-
-            requestAnimationFrame(() => {
-                resizeChartCanvas();
-            });
-        });
-
-        btnShowTable.addEventListener('click', () => {
-
-            btnShowTable.classList.add(
-                'bg-slate-800',
-                'text-white',
-                'border',
-                'border-slate-700'
-            );
-
-            btnShowTable.classList.remove('text-slate-400');
-
-            btnShowChart.classList.remove(
-                'bg-slate-800',
-                'text-white',
-                'border',
-                'border-slate-700'
-            );
-
-            btnShowChart.classList.add('text-slate-400');
-
-            if (resultsSection) {
-                resultsSection.classList.remove('hidden');
-            }
-
-            if (chartSection) {
-                chartSection.classList.add('hidden');
-            }
-        });
+        );
     }
 
-    // --- Reset Workspace ---
+    // =========================================================
+    // RESET WORKSPACE
+    // =========================================================
+
     if (resetLayoutBtn) {
-        resetLayoutBtn.addEventListener('click', () => {
 
-            if (portfolioList) {
-                portfolioList.innerHTML = '';
+        resetLayoutBtn.addEventListener(
+            'click',
+            () => {
+
+                if (portfolioList) {
+                    portfolioList.innerHTML = '';
+                }
+
+                addStockRow(
+                    'RELIANCE.NS',
+                    '10'
+                );
+
+                addStockRow(
+                    'TCS.NS',
+                    '5'
+                );
+
+                if (weightSlider) {
+                    weightSlider.value = 0;
+                }
+
+                if (sliderValue) {
+                    sliderValue.innerText =
+                        '0% Shift';
+                }
+
+                resetScenarioDisplay();
             }
-
-            addStockRow('RELIANCE.NS', '10');
-            addStockRow('TCS.NS', '5');
-
-            if (weightSlider) {
-                weightSlider.value = 0;
-            }
-
-            if (sliderValue) {
-                sliderValue.innerText = '0% Shift';
-            }
-
-            resetScenarioDisplay();
-        });
+        );
     }
 
     // =========================================================
@@ -410,14 +714,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!scenarioModal) return;
 
-        scenarioModal.classList.remove('hidden');
-        scenarioModal.setAttribute('aria-hidden', 'false');
+        scenarioModal.classList.remove(
+            'hidden'
+        );
 
-        document.body.classList.add('scenario-modal-open');
+        scenarioModal.setAttribute(
+            'aria-hidden',
+            'false'
+        );
+
+        document.body.classList.add(
+            'scenario-modal-open'
+        );
 
         updateScenarioBaseValues();
 
         requestAnimationFrame(() => {
+
             if (closeScenarioBtn) {
                 closeScenarioBtn.focus();
             }
@@ -428,10 +741,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!scenarioModal) return;
 
-        scenarioModal.classList.add('hidden');
-        scenarioModal.setAttribute('aria-hidden', 'true');
+        scenarioModal.classList.add(
+            'hidden'
+        );
 
-        document.body.classList.remove('scenario-modal-open');
+        scenarioModal.setAttribute(
+            'aria-hidden',
+            'true'
+        );
+
+        document.body.classList.remove(
+            'scenario-modal-open'
+        );
     }
 
     function updateScenarioBaseValues() {
@@ -439,23 +760,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!lastSummaryData) {
 
             if (scenarioCurrentNav) {
-                scenarioCurrentNav.innerText = '₹0.00';
+                scenarioCurrentNav.innerText =
+                    '₹0.00';
             }
 
             if (scenarioBaseNav) {
-                scenarioBaseNav.innerText = '₹0.00';
+                scenarioBaseNav.innerText =
+                    '₹0.00';
             }
 
             if (scenarioResultNav) {
-                scenarioResultNav.innerText = '₹0.00';
+                scenarioResultNav.innerText =
+                    '₹0.00';
             }
 
             if (scenarioImpact) {
-                scenarioImpact.innerText = '₹0.00';
+                scenarioImpact.innerText =
+                    '₹0.00';
             }
 
             if (scenarioReturn) {
-                scenarioReturn.innerText = '0.00%';
+                scenarioReturn.innerText =
+                    '0.00%';
             }
 
             if (scenarioStatus) {
@@ -467,22 +793,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const currentNav =
-            Number(lastSummaryData.total_current_nav) || 0;
+            Number(
+                lastSummaryData.total_current_nav
+            ) || 0;
 
         const basePredicted =
-            Number(lastSummaryData.total_projected_nav) || 0;
+            Number(
+                lastSummaryData.total_projected_nav
+            ) || 0;
 
         if (scenarioCurrentNav) {
+
             scenarioCurrentNav.innerText =
                 formatINR(currentNav);
         }
 
         if (scenarioBaseNav) {
+
             scenarioBaseNav.innerText =
                 formatINR(basePredicted);
         }
 
         if (scenarioStatus) {
+
             scenarioStatus.innerText =
                 "Scenario calculations are hypothetical. They do not modify the portfolio data or the ML engine's actual forecast.";
         }
@@ -491,34 +824,43 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetScenarioDisplay() {
 
         if (scenarioCurrentNav) {
-            scenarioCurrentNav.innerText = '₹0.00';
+            scenarioCurrentNav.innerText =
+                '₹0.00';
         }
 
         if (scenarioBaseNav) {
-            scenarioBaseNav.innerText = '₹0.00';
+            scenarioBaseNav.innerText =
+                '₹0.00';
         }
 
         if (scenarioResultNav) {
-            scenarioResultNav.innerText = '₹0.00';
+            scenarioResultNav.innerText =
+                '₹0.00';
         }
 
         if (scenarioImpact) {
-            scenarioImpact.innerText = '₹0.00';
+            scenarioImpact.innerText =
+                '₹0.00';
         }
 
         if (scenarioReturn) {
-            scenarioReturn.innerText = '0.00%';
+
+            scenarioReturn.innerText =
+                '0.00%';
+
             scenarioReturn.className =
                 'text-2xl sm:text-3xl font-bold font-mono text-slate-100';
         }
 
         if (scenarioStatus) {
+
             scenarioStatus.innerText =
                 "Execute the portfolio forecast engine first, then use this module to test hypothetical NAV scenarios.";
         }
     }
 
     if (openScenarioBtn) {
+
         openScenarioBtn.addEventListener(
             'click',
             openScenarioModal
@@ -526,6 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (closeScenarioBtn) {
+
         closeScenarioBtn.addEventListener(
             'click',
             closeScenarioModal
@@ -534,143 +877,188 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close when clicking the darkened area outside the modal
     if (scenarioModal) {
-        scenarioModal.addEventListener('click', (event) => {
 
-            if (event.target === scenarioModal) {
-                closeScenarioModal();
+        scenarioModal.addEventListener(
+            'click',
+            (event) => {
+
+                if (
+                    event.target ===
+                    scenarioModal
+                ) {
+                    closeScenarioModal();
+                }
             }
-        });
+        );
     }
 
     // Close with Escape key
-    document.addEventListener('keydown', (event) => {
-
-        if (
-            event.key === 'Escape' &&
-            scenarioModal &&
-            !scenarioModal.classList.contains('hidden')
-        ) {
-            closeScenarioModal();
-        }
-    });
-
-    // --- Scenario Slider ---
-    if (weightSlider) {
-
-        weightSlider.addEventListener('input', (e) => {
-
-            const shiftVal =
-                parseInt(e.target.value, 10);
-
-            if (sliderValue) {
-                sliderValue.innerText =
-                    `${shiftVal > 0 ? '+' : ''}${shiftVal}% Shift`;
-            }
-        });
-    }
-
-    // --- Scenario Calculation ---
-    if (simulateBtn) {
-
-        simulateBtn.addEventListener('click', () => {
+    document.addEventListener(
+        'keydown',
+        (event) => {
 
             if (
-                !lastSummaryData ||
-                Number(lastSummaryData.total_current_nav) === 0
+                event.key === 'Escape' &&
+                scenarioModal &&
+                !scenarioModal.classList.contains(
+                    'hidden'
+                )
             ) {
+                closeScenarioModal();
+            }
+        }
+    );
 
-                if (scenarioStatus) {
-                    scenarioStatus.innerText =
-                        "No active portfolio forecast is available. Execute the T+1 Forecast Engine first.";
+    // =========================================================
+    // SCENARIO SLIDER
+    // =========================================================
+
+    if (weightSlider) {
+
+        weightSlider.addEventListener(
+            'input',
+            (e) => {
+
+                const shiftVal =
+                    parseInt(
+                        e.target.value,
+                        10
+                    );
+
+                if (sliderValue) {
+
+                    sliderValue.innerText =
+                        `${shiftVal > 0 ? '+' : ''}${shiftVal}% Shift`;
+                }
+            }
+        );
+    }
+
+    // =========================================================
+    // SCENARIO CALCULATION
+    // =========================================================
+
+    if (simulateBtn) {
+
+        simulateBtn.addEventListener(
+            'click',
+            () => {
+
+                if (
+                    !lastSummaryData ||
+                    Number(
+                        lastSummaryData.total_current_nav
+                    ) === 0
+                ) {
+
+                    if (scenarioStatus) {
+
+                        scenarioStatus.innerText =
+                            "No active portfolio forecast is available. Execute the T+1 Forecast Engine first.";
+                    }
+
+                    return;
                 }
 
-                return;
+                const shiftPercent =
+                    parseFloat(
+                        weightSlider
+                            ? weightSlider.value
+                            : 0
+                    ) / 100;
+
+                const baseCurrent =
+                    Number(
+                        lastSummaryData.total_current_nav
+                    ) || 0;
+
+                const basePredicted =
+                    Number(
+                        lastSummaryData.total_projected_nav
+                    ) || 0;
+
+                // Preserve the exact existing scenario calculation logic.
+                const simulatedPredicted =
+                    basePredicted *
+                    (1 + shiftPercent);
+
+                const simulatedPctChange =
+                    baseCurrent > 0
+                        ? (
+                            (
+                                simulatedPredicted -
+                                baseCurrent
+                            ) /
+                            baseCurrent
+                        ) * 100
+                        : 0;
+
+                const scenarioDelta =
+                    simulatedPredicted -
+                    basePredicted;
+
+                // Update ONLY the scenario modal.
+                // The main ML engine cards remain untouched.
+                if (scenarioCurrentNav) {
+
+                    scenarioCurrentNav.innerText =
+                        formatINR(baseCurrent);
+                }
+
+                if (scenarioBaseNav) {
+
+                    scenarioBaseNav.innerText =
+                        formatINR(basePredicted);
+                }
+
+                if (scenarioResultNav) {
+
+                    scenarioResultNav.innerText =
+                        formatINR(
+                            simulatedPredicted
+                        );
+                }
+
+                if (scenarioImpact) {
+
+                    scenarioImpact.innerText =
+                        `${scenarioDelta >= 0 ? '+' : ''}${formatINR(scenarioDelta)}`;
+
+                    scenarioImpact.className =
+                        `text-lg font-bold font-mono mt-2 ${
+                            scenarioDelta >= 0
+                                ? 'text-emerald-400'
+                                : 'text-rose-400'
+                        }`;
+                }
+
+                if (scenarioReturn) {
+
+                    scenarioReturn.innerText =
+                        `${simulatedPctChange >= 0 ? '+' : ''}${simulatedPctChange.toFixed(2)}%`;
+
+                    scenarioReturn.className =
+                        `text-2xl sm:text-3xl font-bold font-mono ${
+                            simulatedPctChange >= 0
+                                ? 'text-emerald-400'
+                                : 'text-rose-400'
+                        }`;
+                }
+
+                if (scenarioStatus) {
+
+                    const shiftDisplay =
+                        `${shiftPercent >= 0 ? '+' : ''}${(
+                            shiftPercent * 100
+                        ).toFixed(0)}%`;
+
+                    scenarioStatus.innerText =
+                        `Scenario applied at ${shiftDisplay}. ` +
+                        `The hypothetical NAV is ${formatINR(simulatedPredicted)}. ` +
+                        `Your actual ML forecast remains unchanged.`;
+                }
             }
-
-            const shiftPercent =
-                parseFloat(
-                    weightSlider
-                        ? weightSlider.value
-                        : 0
-                ) / 100;
-
-            const baseCurrent =
-                Number(lastSummaryData.total_current_nav) || 0;
-
-            const basePredicted =
-                Number(lastSummaryData.total_projected_nav) || 0;
-
-            // Preserve the exact existing scenario calculation logic.
-            const simulatedPredicted =
-                basePredicted * (1 + shiftPercent);
-
-            const simulatedPctChange =
-                baseCurrent > 0
-                    ? (
-                        (simulatedPredicted - baseCurrent)
-                        / baseCurrent
-                    ) * 100
-                    : 0;
-
-            const scenarioDelta =
-                simulatedPredicted - basePredicted;
-
-            // Update ONLY the scenario modal.
-            // The main ML engine cards remain untouched.
-            if (scenarioCurrentNav) {
-                scenarioCurrentNav.innerText =
-                    formatINR(baseCurrent);
-            }
-
-            if (scenarioBaseNav) {
-                scenarioBaseNav.innerText =
-                    formatINR(basePredicted);
-            }
-
-            if (scenarioResultNav) {
-                scenarioResultNav.innerText =
-                    formatINR(simulatedPredicted);
-            }
-
-            if (scenarioImpact) {
-
-                scenarioImpact.innerText =
-                    `${scenarioDelta >= 0 ? '+' : ''}${formatINR(scenarioDelta)}`;
-
-                scenarioImpact.className =
-                    `text-lg font-bold font-mono mt-2 ${
-                        scenarioDelta >= 0
-                            ? 'text-emerald-400'
-                            : 'text-rose-400'
-                    }`;
-            }
-
-            if (scenarioReturn) {
-
-                scenarioReturn.innerText =
-                    `${simulatedPctChange >= 0 ? '+' : ''}${simulatedPctChange.toFixed(2)}%`;
-
-                scenarioReturn.className =
-                    `text-2xl sm:text-3xl font-bold font-mono ${
-                        simulatedPctChange >= 0
-                            ? 'text-emerald-400'
-                            : 'text-rose-400'
-                    }`;
-            }
-
-            if (scenarioStatus) {
-
-                const shiftDisplay =
-                    `${shiftPercent >= 0 ? '+' : ''}${(
-                        shiftPercent * 100
-                    ).toFixed(0)}%`;
-
-                scenarioStatus.innerText =
-                    `Scenario applied at ${shiftDisplay}. ` +
-                    `The hypothetical NAV is ${formatINR(simulatedPredicted)}. ` +
-                    `Your actual ML forecast remains unchanged.`;
-            }
-        });
+        );
     }
 
     // =========================================================
@@ -679,7 +1067,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function runManualEngine() {
 
-        const manualInputs = getManualInputs();
+        const manualInputs =
+            getManualInputs();
 
         const lookbackDays =
             parseInt(
@@ -694,7 +1083,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? modelTypeSelect.value
                 : 'linear';
 
-        if (!manualInputs || manualInputs.length === 0) {
+        if (
+            !manualInputs ||
+            manualInputs.length === 0
+        ) {
 
             alert(
                 "No tickers found. Please type a ticker symbol into the input field (e.g. RELIANCE.NS)."
@@ -704,12 +1096,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (btnText) {
+
             btnText.innerText =
                 "Running Manual Portfolio Engine...";
         }
 
         if (btnSpinner) {
-            btnSpinner.classList.remove('hidden');
+            btnSpinner.classList.remove(
+                'hidden'
+            );
         }
 
         if (manualAnalyzeBtn) {
@@ -728,21 +1123,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
 
-            const response = await fetch(
-                `${API_BASE_URL}/api/v1/predict-stock`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                }
-            );
+            const response =
+                await fetch(
+                    `${API_BASE_URL}/api/v1/predict-stock`,
+                    {
+                        method: 'POST',
+
+                        headers: {
+                            'Content-Type':
+                                'application/json'
+                        },
+
+                        body:
+                            JSON.stringify(payload)
+                    }
+                );
 
             const resJson =
                 await response.json();
 
             if (!response.ok) {
+
                 throw new Error(
                     resJson.detail ||
                     `HTTP ${response.status}`
@@ -756,6 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 !analyticsData ||
                 !analyticsData.holdings
             ) {
+
                 alert(
                     "Analysis returned an empty or invalid payload."
                 );
@@ -769,7 +1171,9 @@ document.addEventListener('DOMContentLoaded', () => {
             lastSummaryData =
                 analyticsData.summary;
 
-            displayResults(analyticsData);
+            displayResults(
+                analyticsData
+            );
 
             const firstValid =
                 globalPortfolioData.find(
@@ -777,7 +1181,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
 
             if (firstValid) {
-                renderChart(firstValid);
+                renderChart(
+                    firstValid
+                );
             }
 
             // Keep scenario modal synced with newest engine result
@@ -792,12 +1198,16 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
 
             if (btnText) {
+
                 btnText.innerText =
                     "Execute T+1 Forecast Engine";
             }
 
             if (btnSpinner) {
-                btnSpinner.classList.add('hidden');
+
+                btnSpinner.classList.add(
+                    'hidden'
+                );
             }
 
             if (manualAnalyzeBtn) {
@@ -811,6 +1221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (manualAnalyzeBtn) {
+
         manualAnalyzeBtn.addEventListener(
             'click',
             runManualEngine
@@ -842,49 +1253,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Fallback to manual execution if no token
                 if (!token) {
+
                     await runManualEngine();
+
                     return;
                 }
 
                 const payload = {
+
                     broker: 'upstox',
+
                     access_token: token,
+
                     model_type:
                         modelTypeSelect
                             ? modelTypeSelect.value
                             : 'linear',
-                    lookback_days: lookbackDays
+
+                    lookback_days:
+                        lookbackDays
                 };
 
                 if (btnText) {
+
                     btnText.innerText =
                         "Syncing Upstox & Executing Analytics...";
                 }
 
                 if (btnSpinner) {
-                    btnSpinner.classList.remove('hidden');
+
+                    btnSpinner.classList.remove(
+                        'hidden'
+                    );
                 }
 
                 analyzeBtn.disabled = true;
 
                 try {
 
-                    const response = await fetch(
-                        `${API_BASE_URL}/api/v1/sync-and-analyze`,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        }
-                    );
+                    const response =
+                        await fetch(
+                            `${API_BASE_URL}/api/v1/sync-and-analyze`,
+                            {
+                                method: 'POST',
+
+                                headers: {
+                                    'Content-Type':
+                                        'application/json'
+                                },
+
+                                body:
+                                    JSON.stringify(
+                                        payload
+                                    )
+                            }
+                        );
 
                     if (!response.ok) {
 
                         const errData =
-                            await response.json()
-                                .catch(() => ({}));
+                            await response
+                                .json()
+                                .catch(
+                                    () => ({})
+                                );
 
                         throw new Error(
                             errData.detail ||
@@ -916,7 +1348,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastSummaryData =
                         analyticsData.summary;
 
-                    displayResults(analyticsData);
+                    displayResults(
+                        analyticsData
+                    );
 
                     const firstValid =
                         globalPortfolioData.find(
@@ -924,7 +1358,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         );
 
                     if (firstValid) {
-                        renderChart(firstValid);
+
+                        renderChart(
+                            firstValid
+                        );
                     }
 
                     // Keep scenario modal synced with newest engine result
@@ -939,12 +1376,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 } finally {
 
                     if (btnText) {
+
                         btnText.innerText =
                             "Execute T+1 Forecast Engine";
                     }
 
                     if (btnSpinner) {
-                        btnSpinner.classList.add('hidden');
+
+                        btnSpinner.classList.add(
+                            'hidden'
+                        );
                     }
 
                     analyzeBtn.disabled = false;
@@ -957,38 +1398,51 @@ document.addEventListener('DOMContentLoaded', () => {
     // RENDER METRIC CARDS & POSITIONS TABLE
     // =========================================================
 
-    function displayResults(analyticsData) {
+    function displayResults(
+        analyticsData
+    ) {
 
         const summary =
             analyticsData.summary || {};
 
         const totCurrentEl =
-            document.getElementById('tot-current');
+            document.getElementById(
+                'tot-current'
+            );
 
         const totPredictedEl =
-            document.getElementById('tot-predicted');
+            document.getElementById(
+                'tot-predicted'
+            );
 
         if (totCurrentEl) {
+
             totCurrentEl.innerText =
                 formatINR(
-                    summary.total_current_nav || 0
+                    summary.total_current_nav ||
+                    0
                 );
         }
 
         if (totPredictedEl) {
+
             totPredictedEl.innerText =
                 formatINR(
-                    summary.total_projected_nav || 0
+                    summary.total_projected_nav ||
+                    0
                 );
         }
 
         const pctEl =
-            document.getElementById('tot-change');
+            document.getElementById(
+                'tot-change'
+            );
 
         if (pctEl) {
 
             const pctVal =
-                summary.portfolio_alpha_pct || 0;
+                summary.portfolio_alpha_pct ||
+                0;
 
             pctEl.innerText =
                 `${pctVal >= 0 ? '+' : ''}${pctVal.toFixed(2)}%`;
@@ -1009,8 +1463,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (avgConfidenceEl) {
 
             const r2Val =
-                (summary.average_r2_confidence || 0)
-                * 100;
+                (
+                    summary.average_r2_confidence ||
+                    0
+                ) * 100;
 
             avgConfidenceEl.innerText =
                 `${r2Val.toFixed(1)}%`;
@@ -1031,7 +1487,9 @@ document.addEventListener('DOMContentLoaded', () => {
         holdings.forEach(item => {
 
             const tr =
-                document.createElement('tr');
+                document.createElement(
+                    'tr'
+                );
 
             tr.className =
                 "hover:bg-slate-800/50 cursor-pointer transition";
@@ -1044,7 +1502,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
 
                 const changePct =
-                    item.expected_change_pct || 0;
+                    item.expected_change_pct ||
+                    0;
 
                 const isPositive =
                     changePct >= 0;
@@ -1078,8 +1537,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="py-3">
                         <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                             ${(
-                                (item.model_r2_score || 0)
-                                * 100
+                                (
+                                    item.model_r2_score ||
+                                    0
+                                ) * 100
                             ).toFixed(1)}%
                         </span>
                     </td>
@@ -1088,7 +1549,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.addEventListener(
                     'click',
                     () => {
-                        renderChart(item);
+
+                        renderChart(
+                            item
+                        );
 
                         if (btnShowChart) {
                             btnShowChart.click();
@@ -1105,7 +1569,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // RENDER STOCK PRICE TRAJECTORY CHART
     // =========================================================
 
-    function renderChart(itemData) {
+    function renderChart(
+        itemData
+    ) {
 
         const chartTitle =
             document.getElementById(
@@ -1118,15 +1584,19 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
         if (chartTitle) {
+
             chartTitle.innerText =
                 `${itemData.symbol} Target Trajectory`;
         }
 
         if (chartAccuracy) {
+
             chartAccuracy.innerText =
                 `R² Confidence: ${(
-                    (itemData.model_r2_score || 0)
-                    * 100
+                    (
+                        itemData.model_r2_score ||
+                        0
+                    ) * 100
                 ).toFixed(1)}%`;
         }
 
@@ -1150,9 +1620,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         predictedSeries.setData([
             lastHistorical,
+
             {
-                time: itemData.prediction_date,
-                value: itemData.target_price_t1
+                time:
+                    itemData.prediction_date,
+
+                value:
+                    itemData.target_price_t1
             }
         ]);
 

@@ -1,62 +1,232 @@
 /* ==========================================================================
-   Portfolio Predictor - Production Dark Terminal CSS
+   Portfolio Predictor - Production Dark/Light Terminal CSS
    Stack: Tailwind CSS + Inter & JetBrains Mono + Custom Glassmorphism
    ========================================================================== */
 
 /* 1. Google Fonts Import */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 
-/* 2. Theme CSS Variables */
-:root {
-  --bg-main: #020617;        /* Slate 950 */
-  --bg-card: #0f172a;        /* Slate 900 */
-  --bg-card-hover: #1e293b;  /* Slate 800 */
-  --border-color: #1e293b;   /* Slate 800 */
-  --border-active: #334155;  /* Slate 700 */
-  
-  --color-primary: #3b82f6;  /* Blue 500 */
-  --color-primary-hover: #2563eb; /* Blue 600 */
-  --color-success: #10b981;  /* Emerald 500 */
-  --color-danger: #f43f5e;   /* Rose 500 */
-  --color-text-muted: #94a3b8; /* Slate 400 */
-  --color-text-light: #f8fafc; /* Slate 50 */
 
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', Consolas, Monaco, 'Andale Mono', monospace;
+/* ==========================================================================
+   2. Theme CSS Variables
+   ========================================================================== */
+
+:root {
+  /* ------------------------- DARK THEME ------------------------- */
+
+  --bg-main: #020617;
+  --bg-card: #0f172a;
+  --bg-card-hover: #1e293b;
+
+  --border-color: #1e293b;
+  --border-active: #334155;
+
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+
+  --color-success: #10b981;
+  --color-danger: #f43f5e;
+
+  --color-text-muted: #94a3b8;
+  --color-text-light: #f8fafc;
+
+  --slider-track: #1e293b;
+  --slider-thumb: #3b82f6;
+  --slider-thumb-border: #0f172a;
+
+  --scrollbar-track: #020617;
+  --scrollbar-thumb: #1e293b;
+  --scrollbar-thumb-hover: #334155;
+
+  --table-hover: rgba(30, 41, 59, 0.5);
+
+  --glass-bg: rgba(15, 23, 42, 0.75);
+  --glass-border: rgba(51, 65, 85, 0.5);
+
+  --theme-toggle-bg: #0f172a;
+  --theme-toggle-border: #334155;
+  --theme-toggle-hover: #1e293b;
+
+  --shadow-color: rgba(0, 0, 0, 0.25);
+
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+
+  --font-mono: 'JetBrains Mono', Consolas, Monaco,
+    'Andale Mono', monospace;
 }
 
-/* 3. Base Reset & Layout Constraints */
+
+/* ==========================================================================
+   LIGHT THEME
+   Activated by adding .light-theme to <body>
+   ========================================================================== */
+
+body.light-theme {
+  --bg-main: #f5f6f8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #eef1f5;
+
+  --border-color: #dfe3e8;
+  --border-active: #c7cdd5;
+
+  --color-primary: #315bb5;
+  --color-primary-hover: #264a98;
+
+  --color-success: #0f8a68;
+  --color-danger: #d63b55;
+
+  --color-text-muted: #667085;
+  --color-text-light: #182230;
+
+  --slider-track: #d9dee7;
+  --slider-thumb: #315bb5;
+  --slider-thumb-border: #ffffff;
+
+  --scrollbar-track: #f5f6f8;
+  --scrollbar-thumb: #cbd1d9;
+  --scrollbar-thumb-hover: #aeb6c1;
+
+  --table-hover: rgba(226, 231, 238, 0.65);
+
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(203, 209, 218, 0.8);
+
+  --theme-toggle-bg: #ffffff;
+  --theme-toggle-border: #d5dae2;
+  --theme-toggle-hover: #eef1f5;
+
+  --shadow-color: rgba(15, 23, 42, 0.08);
+}
+
+
+/* ==========================================================================
+   3. Base Reset & Layout Constraints
+   ========================================================================== */
+
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+html {
+  background-color: var(--bg-main);
+  transition: background-color 0.25s ease;
 }
 
 body {
   margin: 0;
   padding: 0;
+
   background-color: var(--bg-main);
   color: var(--color-text-light);
+
   font-family: var(--font-sans);
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
   min-height: 100vh;
+
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
-/* Monospace Utilities */
+
+/* ==========================================================================
+   4. Theme Toggle Button
+   ========================================================================== */
+
+#theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+
+  padding: 0;
+
+  background: var(--theme-toggle-bg);
+  color: var(--color-text-light);
+
+  border: 1px solid var(--theme-toggle-border);
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+#theme-toggle:hover {
+  background: var(--theme-toggle-hover);
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+#theme-toggle:active {
+  transform: translateY(0) scale(0.96);
+}
+
+#theme-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+#theme-toggle svg {
+  width: 20px;
+  height: 20px;
+
+  transition:
+    transform 0.25s ease,
+    color 0.2s ease;
+}
+
+#theme-toggle:hover svg {
+  transform: rotate(12deg);
+}
+
+
+/* ==========================================================================
+   5. Monospace Utilities
+   ========================================================================== */
+
 .font-mono {
   font-family: var(--font-mono) !important;
 }
 
-/* 4. TradingView Canvas & Section Container */
+
+/* ==========================================================================
+   6. TradingView Canvas & Section Container
+   ========================================================================== */
+
 #tv-chart {
   width: 100%;
   height: 340px;
   min-height: 340px;
+
   position: relative;
+
   border-radius: 0.5rem;
   overflow: hidden;
+
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease;
 }
 
+
 /* Responsive height scaling for wider screens */
+
 @media (min-width: 1024px) {
   #tv-chart {
     height: 420px;
@@ -64,70 +234,106 @@ body {
   }
 }
 
-/* 5. Custom Range Slider Styling (Stress Simulator) */
+
+/* ==========================================================================
+   7. Custom Range Slider Styling (Stress Simulator)
+   ========================================================================== */
+
 input[type="range"]#weight-slider {
   -webkit-appearance: none;
   appearance: none;
+
   width: 100%;
   height: 6px;
-  background: #1e293b;
+
+  background: var(--slider-track);
+
   border-radius: 9999px;
+
   outline: none;
-  transition: background 0.2s ease;
+
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease;
 }
 
 input[type="range"]#weight-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
+
   width: 18px;
   height: 18px;
+
   border-radius: 50%;
-  background: #3b82f6;
-  border: 2px solid #0f172a;
+
+  background: var(--slider-thumb);
+
+  border: 2px solid var(--slider-thumb-border);
+
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-  transition: transform 0.15s ease, background-color 0.15s ease;
+
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
 }
 
 input[type="range"]#weight-slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
-  background: #60a5fa;
+
+  background: var(--color-primary-hover);
 }
 
 input[type="range"]#weight-slider::-moz-range-thumb {
   width: 18px;
   height: 18px;
+
   border-radius: 50%;
-  background: #3b82f6;
-  border: 2px solid #0f172a;
+
+  background: var(--slider-thumb);
+
+  border: 2px solid var(--slider-thumb-border);
+
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
 }
 
-/* 6. Custom Scrollbar Styling */
+
+/* ==========================================================================
+   8. Custom Scrollbar Styling
+   ========================================================================== */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--scrollbar-thumb);
+
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--scrollbar-thumb-hover);
 }
 
-/* 7. Loading Spinner Keyframes */
+
+/* ==========================================================================
+   9. Loading Spinner Keyframes
+   ========================================================================== */
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -137,12 +343,20 @@ input[type="range"]#weight-slider::-moz-range-thumb {
   animation: spin 0.8s linear infinite;
 }
 
-/* Hidden Utility */
+
+/* ==========================================================================
+   10. Hidden Utility
+   ========================================================================== */
+
 .hidden {
   display: none !important;
 }
 
-/* 8. Table & Row Hover Transitions */
+
+/* ==========================================================================
+   11. Table & Row Hover Transitions
+   ========================================================================== */
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -150,7 +364,10 @@ table {
 
 #results-body tr {
   border-bottom: 1px solid var(--border-color);
-  transition: background-color 0.15s ease-in-out;
+
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.25s ease;
 }
 
 #results-body tr:last-child {
@@ -158,32 +375,172 @@ table {
 }
 
 #results-body tr:hover {
-  background-color: rgba(30, 41, 59, 0.5);
+  background-color: var(--table-hover);
 }
 
-/* 9. Glassmorphism Card Panels */
+
+/* ==========================================================================
+   12. Glassmorphism Card Panels
+   ========================================================================== */
+
 .glass-panel {
-  background: rgba(15, 23, 42, 0.75);
+  background: var(--glass-bg);
+
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(51, 65, 85, 0.5);
+
+  border: 1px solid var(--glass-border);
+
   border-radius: 0.75rem;
+
+  box-shadow: 0 4px 20px var(--shadow-color);
+
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
-/* 10. Manual Asset Input Fields & Dynamic Rows */
-.sym-input, .share-input {
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+/* ==========================================================================
+   13. Manual Asset Input Fields & Dynamic Rows
+   ========================================================================== */
+
+.sym-input,
+.share-input {
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
-.sym-input:focus, .share-input:focus {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+.sym-input:focus,
+.share-input:focus {
+  border-color: var(--color-primary) !important;
+
+  box-shadow:
+    0 0 0 2px rgba(49, 91, 181, 0.18);
 }
+
+
+/* ==========================================================================
+   14. Remove Button
+   ========================================================================== */
 
 .remove-btn {
-  transition: color 0.15s ease, transform 0.15s ease;
+  transition:
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .remove-btn:hover {
   transform: scale(1.1);
+}
+
+
+/* ==========================================================================
+   15. Light Theme - Additional UI Adjustments
+   ========================================================================== */
+
+body.light-theme input,
+body.light-theme select,
+body.light-theme textarea {
+  color: var(--color-text-light);
+}
+
+body.light-theme input::placeholder,
+body.light-theme textarea::placeholder {
+  color: #8a93a1;
+}
+
+body.light-theme select {
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+body.light-theme option {
+  background-color: #ffffff;
+  color: #182230;
+}
+
+
+/* Tailwind-style dark backgrounds that need a light-theme override */
+
+body.light-theme .bg-slate-950 {
+  background-color: var(--bg-main) !important;
+}
+
+body.light-theme .bg-slate-900 {
+  background-color: var(--bg-card) !important;
+}
+
+body.light-theme .bg-slate-800 {
+  background-color: var(--bg-card-hover) !important;
+}
+
+
+/* Tailwind-style text overrides */
+
+body.light-theme .text-white {
+  color: var(--color-text-light) !important;
+}
+
+body.light-theme .text-slate-50 {
+  color: var(--color-text-light) !important;
+}
+
+body.light-theme .text-slate-300 {
+  color: #475467 !important;
+}
+
+body.light-theme .text-slate-400 {
+  color: var(--color-text-muted) !important;
+}
+
+body.light-theme .text-slate-500 {
+  color: #7b8492 !important;
+}
+
+
+/* Border overrides */
+
+body.light-theme .border-slate-800 {
+  border-color: var(--border-color) !important;
+}
+
+body.light-theme .border-slate-700 {
+  border-color: var(--border-active) !important;
+}
+
+
+/* ==========================================================================
+   16. Light Theme - Primary Buttons
+   ========================================================================== */
+
+body.light-theme .bg-blue-600 {
+  background-color: var(--color-primary) !important;
+}
+
+body.light-theme .hover\:bg-blue-700:hover {
+  background-color: var(--color-primary-hover) !important;
+}
+
+body.light-theme .text-blue-400 {
+  color: #315bb5 !important;
+}
+
+body.light-theme .text-blue-500 {
+  color: #315bb5 !important;
+}
+
+
+/* ==========================================================================
+   17. Theme Transition Protection
+   ========================================================================== */
+
+body.theme-changing *,
+body.theme-changing *::before,
+body.theme-changing *::after {
+  transition-duration: 0.15s !important;
 }
