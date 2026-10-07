@@ -24,6 +24,7 @@ class PortfolioMLEngine:
         * Trend Proxy
     - Calculates T+1 NAV targets, portfolio Alpha yield, and average R² confidence.
     - Generates historical chart data for frontend visualization.
+    - Generates OHLC chart data for candlestick and bar visualizations.
     """
 
     def __init__(
@@ -131,7 +132,16 @@ class PortfolioMLEngine:
             raise RuntimeError(f"Market data stream failed: {str(e)}")
 
         # Parse close prices depending on single vs multi-symbol response format
-        close_prices = self._extract_close_prices(df_data, symbols)
+        close_prices = self._extract_close_prices(
+            df_data,
+            symbols
+        )
+
+        # Parse full OHLC data for frontend candlestick/bar charts.
+        ohlc_prices = self._extract_ohlc_prices(
+            df_data,
+            symbols
+        )
 
         analyzed_stocks = []
 
@@ -170,7 +180,11 @@ class PortfolioMLEngine:
 
             series = close_prices.get(symbol)
 
+            # Full OHLC dataframe for this stock.
+            ohlc_df = ohlc_prices.get(symbol)
+
             history = []
+            ohlc_history = []
             prediction_date = None
 
             # -----------------------------------------------------
@@ -184,13 +198,15 @@ class PortfolioMLEngine:
 
                 # Remove duplicate dates if any
                 clean_series = clean_series[
-                    ~clean_series.index.duplicated(keep="last")
+                    ~clean_series.index.duplicated(
+                        keep="last"
+                    )
                 ]
             else:
                 clean_series = pd.Series(dtype=float)
 
             # -----------------------------------------------------
-            # Generate frontend chart history
+            # Generate frontend line/area chart history
             # -----------------------------------------------------
             if not clean_series.empty:
 
@@ -204,13 +220,16 @@ class PortfolioMLEngine:
 
                         # Convert timestamp to strict YYYY-MM-DD.
                         # Lightweight Charts works reliably with this format.
-                        chart_date = pd.Timestamp(timestamp).strftime(
-                            "%Y-%m-%d"
-                        )
+                        chart_date = pd.Timestamp(
+                            timestamp
+                        ).strftime("%Y-%m-%d")
 
                         history.append({
                             "time": chart_date,
-                            "value": round(numeric_value, 2)
+                            "value": round(
+                                numeric_value,
+                                2
+                            )
                         })
 
                     except (TypeError, ValueError):
@@ -220,12 +239,105 @@ class PortfolioMLEngine:
                 # BDay gives the next business day rather than simply
                 # adding 24 hours.
                 if not clean_series.empty:
-                    last_date = pd.Timestamp(clean_series.index[-1])
-                    next_business_day = last_date + pd.offsets.BDay(1)
-
-                    prediction_date = next_business_day.strftime(
-                        "%Y-%m-%d"
+                    last_date = pd.Timestamp(
+                        clean_series.index[-1]
                     )
+
+                    next_business_day = (
+                        last_date +
+                        pd.offsets.BDay(1)
+                    )
+
+                    prediction_date = (
+                        next_business_day.strftime(
+                            "%Y-%m-%d"
+                        )
+                    )
+
+            # -----------------------------------------------------
+            # Generate frontend OHLC chart history
+            # -----------------------------------------------------
+            if ohlc_df is not None and not ohlc_df.empty:
+
+                # Make a clean chronological copy.
+                clean_ohlc = ohlc_df.copy()
+
+                clean_ohlc = clean_ohlc.sort_index()
+
+                clean_ohlc = clean_ohlc[
+                    ~clean_ohlc.index.duplicated(
+                        keep="last"
+                    )
+                ]
+
+                for timestamp, row in clean_ohlc.iterrows():
+
+                    try:
+                        open_value = float(row["Open"])
+                        high_value = float(row["High"])
+                        low_value = float(row["Low"])
+                        close_value = float(row["Close"])
+
+                        values = [
+                            open_value,
+                            high_value,
+                            low_value,
+                            close_value
+                        ]
+
+                        # Skip malformed/non-finite OHLC rows.
+                        if not all(
+                            np.isfinite(value)
+                            for value in values
+                        ):
+                            continue
+
+                        # Basic OHLC validity check.
+                        # This prevents malformed rows from reaching
+                        # the TradingView candlestick renderer.
+                        if (
+                            high_value < max(
+                                open_value,
+                                close_value
+                            )
+                            or
+                            low_value > min(
+                                open_value,
+                                close_value
+                            )
+                        ):
+                            continue
+
+                        chart_date = pd.Timestamp(
+                            timestamp
+                        ).strftime("%Y-%m-%d")
+
+                        ohlc_history.append({
+                            "time": chart_date,
+                            "open": round(
+                                open_value,
+                                2
+                            ),
+                            "high": round(
+                                high_value,
+                                2
+                            ),
+                            "low": round(
+                                low_value,
+                                2
+                            ),
+                            "close": round(
+                                close_value,
+                                2
+                            )
+                        })
+
+                    except (
+                        TypeError,
+                        ValueError,
+                        KeyError
+                    ):
+                        continue
 
             # -----------------------------------------------------
             # Model prediction
@@ -238,37 +350,57 @@ class PortfolioMLEngine:
 
                 # If market data exists, use its latest value.
                 if not clean_series.empty:
-                    latest_price = float(clean_series.iloc[-1])
+                    latest_price = float(
+                        clean_series.iloc[-1]
+                    )
 
                 pred_price = latest_price
                 r2_score = 0.0
 
             else:
 
-                latest_price = float(clean_series.iloc[-1])
+                latest_price = float(
+                    clean_series.iloc[-1]
+                )
 
-                pred_price, r2_score = self._predict_next_close(
-                    clean_series.values
+                pred_price, r2_score = (
+                    self._predict_next_close(
+                        clean_series.values
+                    )
                 )
 
             # -----------------------------------------------------
             # Portfolio calculations
             # -----------------------------------------------------
-            holding_current_val = latest_price * qty
-            holding_projected_val = pred_price * qty
+            holding_current_val = (
+                latest_price * qty
+            )
 
-            total_projected_nav += holding_projected_val
+            holding_projected_val = (
+                pred_price * qty
+            )
+
+            total_projected_nav += (
+                holding_projected_val
+            )
 
             weight = (
-                holding_current_val / total_current_nav
+                holding_current_val /
+                total_current_nav
                 if total_current_nav > 0
                 else 0.0
             )
 
-            weighted_r2_sum += r2_score * weight
+            weighted_r2_sum += (
+                r2_score * weight
+            )
 
             expected_move_pct = (
-                ((pred_price - latest_price) / latest_price * 100.0)
+                (
+                    (pred_price - latest_price)
+                    / latest_price
+                    * 100.0
+                )
                 if latest_price > 0
                 else 0.0
             )
@@ -287,7 +419,12 @@ class PortfolioMLEngine:
                 "quantity": qty,
 
                 "average_price": round(
-                    float(holding.get("average_price", 0.0)),
+                    float(
+                        holding.get(
+                            "average_price",
+                            0.0
+                        )
+                    ),
                     2
                 ),
 
@@ -326,10 +463,13 @@ class PortfolioMLEngine:
                     4
                 ),
 
-                # Chart data
+                # Existing line/area chart data.
                 "history": history,
 
-                # T+1 chart prediction date
+                # New OHLC data for candlestick/bar charts.
+                "ohlc_history": ohlc_history,
+
+                # T+1 chart prediction date.
                 "prediction_date": prediction_date
             })
 
@@ -338,7 +478,10 @@ class PortfolioMLEngine:
         # ---------------------------------------------------------
         portfolio_alpha_pct = (
             (
-                (total_projected_nav - total_current_nav)
+                (
+                    total_projected_nav -
+                    total_current_nav
+                )
                 / total_current_nav
                 * 100.0
             )
@@ -372,7 +515,9 @@ class PortfolioMLEngine:
 
                 "lookback_days": self.lookback_days,
 
-                "total_positions": len(analyzed_stocks)
+                "total_positions": len(
+                    analyzed_stocks
+                )
             },
 
             "holdings": analyzed_stocks
@@ -393,7 +538,10 @@ class PortfolioMLEngine:
         if df_data is None or df_data.empty:
             return result
 
-        if isinstance(df_data.columns, pd.MultiIndex):
+        if isinstance(
+            df_data.columns,
+            pd.MultiIndex
+        ):
 
             # Price Level multi-index:
             # ('Close', 'RELIANCE.NS')
@@ -402,6 +550,7 @@ class PortfolioMLEngine:
                 close_df = df_data["Close"]
 
                 for sym in symbols:
+
                     if sym in close_df.columns:
                         result[sym] = close_df[sym]
 
@@ -410,24 +559,187 @@ class PortfolioMLEngine:
             elif "Close" in df_data.columns.get_level_values(1):
 
                 for sym in symbols:
+
                     try:
                         result[sym] = (
                             df_data
-                            .xs("Close", level=1, axis=1)[sym]
+                            .xs(
+                                "Close",
+                                level=1,
+                                axis=1
+                            )[sym]
                         )
+
                     except KeyError:
                         pass
 
         else:
 
             if "Close" in df_data.columns:
-                result[symbols[0]] = df_data["Close"]
+
+                result[symbols[0]] = (
+                    df_data["Close"]
+                )
 
             elif (
                 len(symbols) == 1
-                and isinstance(df_data, pd.Series)
+                and isinstance(
+                    df_data,
+                    pd.Series
+                )
             ):
+
                 result[symbols[0]] = df_data
+
+        return result
+
+    def _extract_ohlc_prices(
+        self,
+        df_data: pd.DataFrame,
+        symbols: List[str]
+    ) -> Dict[str, pd.DataFrame]:
+        """
+        Extracts Open, High, Low and Close data for each stock.
+
+        Supports both yfinance MultiIndex formats:
+
+            ('Open', 'RELIANCE.NS')
+            ('RELIANCE.NS', 'Open')
+
+        and the standard single-symbol dataframe format.
+
+        Returns:
+            {
+                "RELIANCE.NS": DataFrame[
+                    ["Open", "High", "Low", "Close"]
+                ]
+            }
+        """
+
+        result = {}
+
+        if df_data is None or df_data.empty:
+            return result
+
+        required_columns = [
+            "Open",
+            "High",
+            "Low",
+            "Close"
+        ]
+
+        # ---------------------------------------------------------
+        # Multi-symbol yfinance response
+        # ---------------------------------------------------------
+        if isinstance(
+            df_data.columns,
+            pd.MultiIndex
+        ):
+
+            level_0_values = (
+                df_data.columns
+                .get_level_values(0)
+            )
+
+            level_1_values = (
+                df_data.columns
+                .get_level_values(1)
+            )
+
+            # -----------------------------------------------------
+            # Format:
+            # ('Open', 'RELIANCE.NS')
+            # ('High', 'RELIANCE.NS')
+            # -----------------------------------------------------
+            if all(
+                column in level_0_values
+                for column in required_columns
+            ):
+
+                for sym in symbols:
+
+                    try:
+
+                        stock_df = (
+                            df_data[
+                                required_columns
+                            ]
+                            .xs(
+                                sym,
+                                level=1,
+                                axis=1
+                            )
+                        )
+
+                        # Ensure consistent column order.
+                        stock_df = stock_df[
+                            required_columns
+                        ].copy()
+
+                        result[sym] = stock_df
+
+                    except (
+                        KeyError,
+                        ValueError
+                    ):
+                        continue
+
+            # -----------------------------------------------------
+            # Format:
+            # ('RELIANCE.NS', 'Open')
+            # ('RELIANCE.NS', 'High')
+            # -----------------------------------------------------
+            elif all(
+                column in level_1_values
+                for column in required_columns
+            ):
+
+                for sym in symbols:
+
+                    try:
+
+                        stock_df = (
+                            df_data
+                            .xs(
+                                sym,
+                                level=0,
+                                axis=1
+                            )
+                        )
+
+                        stock_df = stock_df[
+                            required_columns
+                        ].copy()
+
+                        result[sym] = stock_df
+
+                    except (
+                        KeyError,
+                        ValueError
+                    ):
+                        continue
+
+        # ---------------------------------------------------------
+        # Single-symbol yfinance response
+        # ---------------------------------------------------------
+        else:
+
+            if all(
+                column in df_data.columns
+                for column in required_columns
+            ):
+
+                if symbols:
+
+                    stock_df = (
+                        df_data[
+                            required_columns
+                        ].copy()
+                    )
+
+                    result[symbols[0]] = (
+                        stock_df
+                    )
 
         return result
 
@@ -454,9 +766,13 @@ class PortfolioMLEngine:
             "close": prices
         })
 
-        df["lag_1"] = df["close"].shift(1)
+        df["lag_1"] = (
+            df["close"].shift(1)
+        )
 
-        df["lag_2"] = df["close"].shift(2)
+        df["lag_2"] = (
+            df["close"].shift(2)
+        )
 
         df["sma_5"] = (
             df["close"]
@@ -527,13 +843,25 @@ class PortfolioMLEngine:
             )
 
             pred_t1 = float(
-                model.predict(latest_features)[0]
+                model.predict(
+                    latest_features
+                )[0]
             )
 
             r2 = (
-                float(model.score(X_test, y_test))
+                float(
+                    model.score(
+                        X_test,
+                        y_test
+                    )
+                )
                 if len(X_test) > 2
-                else float(model.score(X_train, y_train))
+                else float(
+                    model.score(
+                        X_train,
+                        y_train
+                    )
+                )
             )
 
         # ---------------------------------------------------------
@@ -559,13 +887,25 @@ class PortfolioMLEngine:
             )
 
             pred_t1 = float(
-                model.predict(latest_features)[0]
+                model.predict(
+                    latest_features
+                )[0]
             )
 
             r2 = (
-                float(model.score(X_test, y_test))
+                float(
+                    model.score(
+                        X_test,
+                        y_test
+                    )
+                )
                 if len(X_test) > 2
-                else float(model.score(X_train, y_train))
+                else float(
+                    model.score(
+                        X_train,
+                        y_train
+                    )
+                )
             )
 
         # ---------------------------------------------------------
@@ -581,13 +921,25 @@ class PortfolioMLEngine:
             )
 
             r2 = (
-                float(model.score(X_test, y_test))
+                float(
+                    model.score(
+                        X_test,
+                        y_test
+                    )
+                )
                 if len(X_test) > 2
-                else float(model.score(X_train, y_train))
+                else float(
+                    model.score(
+                        X_train,
+                        y_train
+                    )
+                )
             )
 
             reg_pred = float(
-                model.predict(latest_features)[0]
+                model.predict(
+                    latest_features
+                )[0]
             )
 
             ema_pred = float(
@@ -615,13 +967,25 @@ class PortfolioMLEngine:
             )
 
             r2 = (
-                float(model.score(X_test, y_test))
+                float(
+                    model.score(
+                        X_test,
+                        y_test
+                    )
+                )
                 if len(X_test) > 2
-                else float(model.score(X_train, y_train))
+                else float(
+                    model.score(
+                        X_train,
+                        y_train
+                    )
+                )
             )
 
             pred_t1 = float(
-                model.predict(latest_features)[0]
+                model.predict(
+                    latest_features
+                )[0]
             )
 
         return pred_t1, max(0.0, r2)
