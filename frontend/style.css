@@ -1,19 +1,25 @@
 /* ==========================================================================
-   Portfolio Predictor - Production Dark/Light Terminal CSS
-   Stack: Tailwind CSS + Inter & JetBrains Mono + Custom Glassmorphism
+   ProFolio Terminal - Production Theme CSS
+   Stack: Tailwind CSS + Inter & JetBrains Mono + Custom UI
    ========================================================================== */
 
-/* 1. Google Fonts Import */
+
+/* ==========================================================================
+   1. GOOGLE FONTS
+   ========================================================================== */
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 
 
 /* ==========================================================================
-   2. Theme CSS Variables
+   2. THEME CSS VARIABLES
    ========================================================================== */
 
-:root {
-  /* ------------------------- DARK THEME ------------------------- */
+/* -------------------------
+   DEFAULT = DARK THEME
+   ------------------------- */
 
+:root {
   --bg-main: #020617;
   --bg-card: #0f172a;
   --bg-card-hover: #1e293b;
@@ -30,36 +36,42 @@
   --color-text-muted: #94a3b8;
   --color-text-light: #f8fafc;
 
-  --slider-track: #1e293b;
-  --slider-thumb: #3b82f6;
-  --slider-thumb-border: #0f172a;
+  --color-input-bg: #020617;
+  --color-input-border: #1e293b;
+
+  --chart-background: #0f172a;
+  --chart-grid: #1e293b;
+  --chart-border: #334155;
 
   --scrollbar-track: #020617;
   --scrollbar-thumb: #1e293b;
   --scrollbar-thumb-hover: #334155;
 
-  --table-hover: rgba(30, 41, 59, 0.5);
-
-  --glass-bg: rgba(15, 23, 42, 0.75);
+  --glass-background: rgba(15, 23, 42, 0.75);
   --glass-border: rgba(51, 65, 85, 0.5);
 
-  --theme-toggle-bg: #0f172a;
-  --theme-toggle-border: #334155;
-  --theme-toggle-hover: #1e293b;
+  --shadow-color: rgba(0, 0, 0, 0.35);
 
-  --shadow-color: rgba(0, 0, 0, 0.25);
+  --font-sans:
+    'Inter',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
 
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, sans-serif;
-
-  --font-mono: 'JetBrains Mono', Consolas, Monaco,
-    'Andale Mono', monospace;
+  --font-mono:
+    'JetBrains Mono',
+    Consolas,
+    Monaco,
+    'Andale Mono',
+    monospace;
 }
 
 
 /* ==========================================================================
-   LIGHT THEME
-   Activated by adding .light-theme to <body>
+   3. LIGHT THEME
    ========================================================================== */
 
 body.light-theme {
@@ -79,38 +91,39 @@ body.light-theme {
   --color-text-muted: #667085;
   --color-text-light: #182230;
 
-  --slider-track: #d9dee7;
-  --slider-thumb: #315bb5;
-  --slider-thumb-border: #ffffff;
+  --color-input-bg: #ffffff;
+  --color-input-border: #d5dae1;
 
-  --scrollbar-track: #f5f6f8;
+  --chart-background: #f8f9fb;
+  --chart-grid: #e4e7ec;
+  --chart-border: #cbd1d9;
+
+  --scrollbar-track: #f1f3f5;
   --scrollbar-thumb: #cbd1d9;
   --scrollbar-thumb-hover: #aeb6c1;
 
-  --table-hover: rgba(226, 231, 238, 0.65);
-
-  --glass-bg: rgba(255, 255, 255, 0.78);
-  --glass-border: rgba(203, 209, 218, 0.8);
-
-  --theme-toggle-bg: #ffffff;
-  --theme-toggle-border: #d5dae2;
-  --theme-toggle-hover: #eef1f5;
+  --glass-background: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(203, 209, 217, 0.8);
 
   --shadow-color: rgba(15, 23, 42, 0.08);
 }
 
 
 /* ==========================================================================
-   3. Base Reset & Layout Constraints
+   4. BASE RESET
    ========================================================================== */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 html {
   background-color: var(--bg-main);
-  transition: background-color 0.25s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 body {
@@ -128,76 +141,13 @@ body {
   min-height: 100vh;
 
   transition:
-    background-color 0.25s ease,
-    color 0.25s ease;
-}
-
-
-/* ==========================================================================
-   4. Theme Toggle Button
-   ========================================================================== */
-
-#theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 42px;
-  height: 42px;
-
-  padding: 0;
-
-  background: var(--theme-toggle-bg);
-  color: var(--color-text-light);
-
-  border: 1px solid var(--theme-toggle-border);
-  border-radius: 10px;
-
-  cursor: pointer;
-
-  transition:
     background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
-
-  box-shadow: 0 2px 8px var(--shadow-color);
-}
-
-#theme-toggle:hover {
-  background: var(--theme-toggle-hover);
-
-  transform: translateY(-1px);
-
-  box-shadow: 0 4px 12px var(--shadow-color);
-}
-
-#theme-toggle:active {
-  transform: translateY(0) scale(0.96);
-}
-
-#theme-toggle:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-#theme-toggle svg {
-  width: 20px;
-  height: 20px;
-
-  transition:
-    transform 0.25s ease,
     color 0.2s ease;
 }
 
-#theme-toggle:hover svg {
-  transform: rotate(12deg);
-}
-
 
 /* ==========================================================================
-   5. Monospace Utilities
+   5. MONOSPACE UTILITY
    ========================================================================== */
 
 .font-mono {
@@ -206,7 +156,7 @@ body {
 
 
 /* ==========================================================================
-   6. TradingView Canvas & Section Container
+   6. TRADINGVIEW CHART
    ========================================================================== */
 
 #tv-chart {
@@ -219,13 +169,10 @@ body {
   border-radius: 0.5rem;
   overflow: hidden;
 
-  transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease;
+  background: var(--chart-background);
+
+  transition: background-color 0.2s ease;
 }
-
-
-/* Responsive height scaling for wider screens */
 
 @media (min-width: 1024px) {
   #tv-chart {
@@ -234,9 +181,13 @@ body {
   }
 }
 
+#tv-chart canvas {
+  display: block !important;
+}
+
 
 /* ==========================================================================
-   7. Custom Range Slider Styling (Stress Simulator)
+   7. RANGE SLIDER
    ========================================================================== */
 
 input[type="range"]#weight-slider {
@@ -246,7 +197,7 @@ input[type="range"]#weight-slider {
   width: 100%;
   height: 6px;
 
-  background: var(--slider-track);
+  background: #1e293b;
 
   border-radius: 9999px;
 
@@ -257,6 +208,9 @@ input[type="range"]#weight-slider {
     opacity 0.2s ease;
 }
 
+
+/* Chrome / Safari */
+
 input[type="range"]#weight-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -266,13 +220,14 @@ input[type="range"]#weight-slider::-webkit-slider-thumb {
 
   border-radius: 50%;
 
-  background: var(--slider-thumb);
+  background: #3b82f6;
 
-  border: 2px solid var(--slider-thumb-border);
+  border: 2px solid #0f172a;
 
   cursor: pointer;
 
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+  box-shadow:
+    0 0 10px rgba(59, 130, 246, 0.5);
 
   transition:
     transform 0.15s ease,
@@ -281,9 +236,11 @@ input[type="range"]#weight-slider::-webkit-slider-thumb {
 
 input[type="range"]#weight-slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
-
-  background: var(--color-primary-hover);
+  background: #60a5fa;
 }
+
+
+/* Firefox */
 
 input[type="range"]#weight-slider::-moz-range-thumb {
   width: 18px;
@@ -291,18 +248,37 @@ input[type="range"]#weight-slider::-moz-range-thumb {
 
   border-radius: 50%;
 
-  background: var(--slider-thumb);
+  background: #3b82f6;
 
-  border: 2px solid var(--slider-thumb-border);
+  border: 2px solid #0f172a;
 
   cursor: pointer;
 
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+  box-shadow:
+    0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+
+/* Light theme slider */
+
+body.light-theme input[type="range"]#weight-slider {
+  background: #d8dde5;
+}
+
+body.light-theme input[type="range"]#weight-slider::-webkit-slider-thumb {
+  background: #315bb5;
+  border-color: #ffffff;
+  box-shadow: 0 0 8px rgba(49, 91, 181, 0.25);
+}
+
+body.light-theme input[type="range"]#weight-slider::-moz-range-thumb {
+  background: #315bb5;
+  border-color: #ffffff;
 }
 
 
 /* ==========================================================================
-   8. Custom Scrollbar Styling
+   8. CUSTOM SCROLLBAR
    ========================================================================== */
 
 ::-webkit-scrollbar {
@@ -316,7 +292,6 @@ input[type="range"]#weight-slider::-moz-range-thumb {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-
   border-radius: 4px;
 }
 
@@ -325,8 +300,18 @@ input[type="range"]#weight-slider::-moz-range-thumb {
 }
 
 
+/* Firefox */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color:
+    var(--scrollbar-thumb)
+    var(--scrollbar-track);
+}
+
+
 /* ==========================================================================
-   9. Loading Spinner Keyframes
+   9. LOADING SPINNER
    ========================================================================== */
 
 @keyframes spin {
@@ -345,7 +330,7 @@ input[type="range"]#weight-slider::-moz-range-thumb {
 
 
 /* ==========================================================================
-   10. Hidden Utility
+   10. HIDDEN UTILITY
    ========================================================================== */
 
 .hidden {
@@ -354,7 +339,7 @@ input[type="range"]#weight-slider::-moz-range-thumb {
 
 
 /* ==========================================================================
-   11. Table & Row Hover Transitions
+   11. TABLE
    ========================================================================== */
 
 table {
@@ -363,11 +348,11 @@ table {
 }
 
 #results-body tr {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom:
+    1px solid var(--border-color);
 
   transition:
-    background-color 0.15s ease-in-out,
-    border-color 0.25s ease;
+    background-color 0.15s ease-in-out;
 }
 
 #results-body tr:last-child {
@@ -375,35 +360,39 @@ table {
 }
 
 #results-body tr:hover {
-  background-color: var(--table-hover);
+  background-color: rgba(30, 41, 59, 0.5);
+}
+
+
+/* Light theme table hover */
+
+body.light-theme #results-body tr:hover {
+  background-color: rgba(15, 23, 42, 0.035);
 }
 
 
 /* ==========================================================================
-   12. Glassmorphism Card Panels
+   12. GLASSMORPHISM PANEL
    ========================================================================== */
 
 .glass-panel {
-  background: var(--glass-bg);
+  background: var(--glass-background);
 
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 
-  border: 1px solid var(--glass-border);
+  border:
+    1px solid var(--glass-border);
 
   border-radius: 0.75rem;
 
-  box-shadow: 0 4px 20px var(--shadow-color);
-
-  transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
+  box-shadow:
+    0 10px 30px var(--shadow-color);
 }
 
 
 /* ==========================================================================
-   13. Manual Asset Input Fields & Dynamic Rows
+   13. INPUT FIELDS
    ========================================================================== */
 
 .sym-input,
@@ -411,21 +400,45 @@ table {
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
-    background-color 0.25s ease,
-    color 0.25s ease;
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .sym-input:focus,
 .share-input:focus {
-  border-color: var(--color-primary) !important;
+  border-color:
+    #3b82f6 !important;
 
   box-shadow:
-    0 0 0 2px rgba(49, 91, 181, 0.18);
+    0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+
+/* Light theme inputs */
+
+body.light-theme .sym-input,
+body.light-theme .share-input {
+  background-color: #ffffff !important;
+  color: #182230 !important;
+  border-color: #d5dae1 !important;
+}
+
+body.light-theme .sym-input::placeholder,
+body.light-theme .share-input::placeholder {
+  color: #98a2b3 !important;
+}
+
+body.light-theme .sym-input:focus,
+body.light-theme .share-input:focus {
+  border-color: #315bb5 !important;
+
+  box-shadow:
+    0 0 0 2px rgba(49, 91, 181, 0.14);
 }
 
 
 /* ==========================================================================
-   14. Remove Button
+   14. REMOVE BUTTON
    ========================================================================== */
 
 .remove-btn {
@@ -440,23 +453,507 @@ table {
 
 
 /* ==========================================================================
-   15. Light Theme - Additional UI Adjustments
+   15. THEME TOGGLE BUTTON
    ========================================================================== */
 
-body.light-theme input,
-body.light-theme select,
-body.light-theme textarea {
-  color: var(--color-text-light);
+#theme-toggle {
+  position: relative;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
 }
 
-body.light-theme input::placeholder,
-body.light-theme textarea::placeholder {
-  color: #8a93a1;
+#theme-toggle:hover {
+  transform: translateY(-1px);
 }
+
+#theme-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.theme-icon {
+  width: 18px;
+  height: 18px;
+
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.sun-icon {
+  display: none;
+}
+
+.moon-icon {
+  display: block;
+}
+
+
+/* Light theme toggle */
+
+body.light-theme #theme-toggle {
+  background-color: #ffffff !important;
+  border-color: #d5dae1 !important;
+  color: #344054 !important;
+}
+
+body.light-theme #theme-toggle:hover {
+  background-color: #f2f4f7 !important;
+  color: #182230 !important;
+}
+
+body.light-theme #theme-toggle .moon-icon {
+  display: none;
+}
+
+body.light-theme #theme-toggle .sun-icon {
+  display: block;
+}
+
+
+/* ==========================================================================
+   16. GENERAL LIGHT THEME TAILWIND OVERRIDES
+   ========================================================================== */
+
+/*
+   Tailwind classes are still present in index.html.
+   These overrides allow the light theme to actually change
+   those surfaces without modifying the HTML structure.
+*/
+
+
+/* Main dark backgrounds */
+
+body.light-theme .bg-slate-950 {
+  background-color: #f5f6f8 !important;
+}
+
+body.light-theme .bg-slate-950\/50 {
+  background-color: rgba(255, 255, 255, 0.65) !important;
+}
+
+body.light-theme .bg-slate-950\/70 {
+  background-color: rgba(255, 255, 255, 0.86) !important;
+}
+
+body.light-theme .bg-slate-900 {
+  background-color: #ffffff !important;
+}
+
+body.light-theme .bg-slate-900\/50 {
+  background-color: rgba(255, 255, 255, 0.75) !important;
+}
+
+body.light-theme .bg-slate-900\/80 {
+  background-color: rgba(255, 255, 255, 0.90) !important;
+}
+
+body.light-theme .bg-slate-900\/90 {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+}
+
+body.light-theme .bg-slate-900\/95 {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+}
+
+body.light-theme .bg-slate-800 {
+  background-color: #eef1f5 !important;
+}
+
+body.light-theme .bg-slate-800\/80 {
+  background-color: rgba(238, 241, 245, 0.92) !important;
+}
+
+
+/* Borders */
+
+body.light-theme .border-slate-800 {
+  border-color: #dfe3e8 !important;
+}
+
+body.light-theme .border-slate-800\/80 {
+  border-color: #dfe3e8 !important;
+}
+
+body.light-theme .border-slate-700 {
+  border-color: #c7cdd5 !important;
+}
+
+body.light-theme .border-slate-700\/50 {
+  border-color: rgba(199, 205, 213, 0.7) !important;
+}
+
+body.light-theme .border-slate-600 {
+  border-color: #b8c0ca !important;
+}
+
+
+/* ==========================================================================
+   17. LIGHT THEME TEXT OVERRIDES
+   ========================================================================== */
+
+body.light-theme .text-slate-100 {
+  color: #182230 !important;
+}
+
+body.light-theme .text-slate-200 {
+  color: #253142 !important;
+}
+
+body.light-theme .text-slate-300 {
+  color: #344054 !important;
+}
+
+body.light-theme .text-slate-400 {
+  color: #667085 !important;
+}
+
+body.light-theme .text-slate-500 {
+  color: #667085 !important;
+}
+
+body.light-theme .text-slate-600 {
+  color: #475467 !important;
+}
+
+
+/* ==========================================================================
+   18. PRIMARY COLORS IN LIGHT THEME
+   ========================================================================== */
+
+body.light-theme .text-blue-400 {
+  color: #315bb5 !important;
+}
+
+body.light-theme .text-blue-300 {
+  color: #315bb5 !important;
+}
+
+body.light-theme .text-blue-500 {
+  color: #315bb5 !important;
+}
+
+body.light-theme .bg-blue-600 {
+  background-color: #315bb5 !important;
+}
+
+body.light-theme .bg-blue-500 {
+  background-color: #315bb5 !important;
+}
+
+body.light-theme .hover\:bg-blue-500:hover {
+  background-color: #264a98 !important;
+}
+
+
+/* ==========================================================================
+   19. GREEN / RED TEXT
+   ========================================================================== */
+
+body.light-theme .text-emerald-400 {
+  color: #0f8a68 !important;
+}
+
+body.light-theme .text-emerald-500 {
+  color: #0f8a68 !important;
+}
+
+body.light-theme .text-rose-400 {
+  color: #d63b55 !important;
+}
+
+body.light-theme .text-rose-500 {
+  color: #d63b55 !important;
+}
+
+
+/* ==========================================================================
+   20. LIGHT THEME — DARK SURFACE TEXT VISIBILITY
+   ==========================================================================
+
+   IMPORTANT:
+   Some terminal-style components intentionally remain DARK
+   even when the overall application is in light mode.
+
+   Text inside those dark surfaces must remain WHITE.
+   This specifically fixes the issue visible in your screenshot.
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   Dark header / terminal bars
+   -------------------------------------------------------------------------- */
+
+body.light-theme header .bg-slate-800,
+body.light-theme header .bg-slate-800\/80 {
+  background-color: #4b5565 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme header .text-slate-400,
+body.light-theme header .text-slate-500 {
+  color: #ffffff !important;
+}
+
+body.light-theme header button {
+  color: #ffffff !important;
+}
+
+body.light-theme header button svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   Chart / Table control bar
+   -------------------------------------------------------------------------- */
+
+/*
+   This is the dark horizontal bar containing:
+
+   Trajectory Chart
+   Positions Breakdown
+   Historical Close
+   Forecast Target
+*/
+
+body.light-theme #btn-show-chart,
+body.light-theme #btn-show-table {
+  color: #ffffff !important;
+}
+
+
+/* Active chart button */
+
+body.light-theme #btn-show-chart {
+  background-color: #4b5565 !important;
+  border-color: #697586 !important;
+  color: #ffffff !important;
+}
+
+
+/* Inactive table button */
+
+body.light-theme #btn-show-table {
+  color: #ffffff !important;
+}
+
+body.light-theme #btn-show-table:hover {
+  color: #ffffff !important;
+}
+
+
+/* Chart legend */
+
+body.light-theme
+.flex.items-center.gap-4.text-xs.font-mono {
+  color: #ffffff !important;
+}
+
+body.light-theme
+.flex.items-center.gap-4.text-xs.font-mono > span {
+  color: #ffffff !important;
+}
+
+
+/* Historical Close / Forecast Target */
+
+body.light-theme
+#chart-section
+.text-xs.font-mono {
+  color: #ffffff !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   Chart title / confidence badge when displayed on dark chart surfaces
+   -------------------------------------------------------------------------- */
+
+body.light-theme #chart-title {
+  color: #182230 !important;
+}
+
+body.light-theme #chart-accuracy {
+  color: #ffffff !important;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   Dark buttons
+   -------------------------------------------------------------------------- */
+
+body.light-theme button.bg-slate-800,
+body.light-theme button.bg-slate-800\/80 {
+  color: #ffffff !important;
+}
+
+body.light-theme button.bg-slate-800:hover,
+body.light-theme button.bg-slate-800\/80:hover {
+  color: #ffffff !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   Dark surfaces with muted Tailwind text
+   -------------------------------------------------------------------------- */
+
+body.light-theme
+.bg-slate-900
+.text-slate-400,
+
+body.light-theme
+.bg-slate-900
+.text-slate-500,
+
+body.light-theme
+.bg-slate-900\/80
+.text-slate-400,
+
+body.light-theme
+.bg-slate-900\/80
+.text-slate-500,
+
+body.light-theme
+.bg-slate-900\/90
+.text-slate-400,
+
+body.light-theme
+.bg-slate-900\/90
+.text-slate-500,
+
+body.light-theme
+.bg-slate-800
+.text-slate-400,
+
+body.light-theme
+.bg-slate-800
+.text-slate-500,
+
+body.light-theme
+.bg-slate-800\/80
+.text-slate-400,
+
+body.light-theme
+.bg-slate-800\/80
+.text-slate-500 {
+  color: #ffffff !important;
+}
+
+
+/* ==========================================================================
+   21. SCENARIO MODAL — LIGHT THEME
+   ========================================================================== */
+
+/* Modal backdrop */
+
+body.light-theme #scenario-modal {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+}
+
+
+/* Modal panel */
+
+body.light-theme #scenario-modal-panel {
+  background-color: #ffffff !important;
+  border-color: #dfe3e8 !important;
+
+  box-shadow:
+    0 25px 60px rgba(15, 23, 42, 0.18);
+}
+
+
+/* Modal header */
+
+body.light-theme #scenario-modal-panel .bg-slate-900,
+body.light-theme #scenario-modal-panel .bg-slate-900\/95 {
+  background-color: #ffffff !important;
+}
+
+
+/* Scenario inner cards */
+
+body.light-theme #scenario-modal-panel .bg-slate-950\/70 {
+  background-color: #f8f9fb !important;
+}
+
+
+/* Scenario text */
+
+body.light-theme #scenario-modal-panel .text-slate-100 {
+  color: #182230 !important;
+}
+
+body.light-theme #scenario-modal-panel .text-slate-200 {
+  color: #253142 !important;
+}
+
+body.light-theme #scenario-modal-panel .text-slate-400 {
+  color: #667085 !important;
+}
+
+body.light-theme #scenario-modal-panel .text-slate-500 {
+  color: #667085 !important;
+}
+
+
+/* Scenario close button */
+
+body.light-theme #close-scenario-btn {
+  background-color: #eef1f5 !important;
+  border-color: #d5dae1 !important;
+  color: #344054 !important;
+}
+
+body.light-theme #close-scenario-btn:hover {
+  background-color: #e4e7ec !important;
+  color: #182230 !important;
+}
+
+
+/* Scenario slider */
+
+body.light-theme #scenario-modal-panel #weight-slider {
+  background: #d8dde5;
+}
+
+
+/* ==========================================================================
+   22. FOOTER
+   ========================================================================== */
+
+body.light-theme footer {
+  background-color: #ffffff !important;
+  border-color: #dfe3e8 !important;
+}
+
+body.light-theme footer .text-slate-400 {
+  color: #667085 !important;
+}
+
+body.light-theme footer .text-amber-400 {
+  color: #b54708 !important;
+}
+
+
+/* ==========================================================================
+   23. SELECT / DROPDOWN ELEMENTS
+   ========================================================================== */
 
 body.light-theme select {
-  background-color: var(--bg-card);
-  border-color: var(--border-color);
+  background-color: #ffffff !important;
+  color: #182230 !important;
+  border-color: #d5dae1 !important;
+}
+
+body.light-theme select:focus {
+  border-color: #315bb5 !important;
 }
 
 body.light-theme option {
@@ -465,82 +962,194 @@ body.light-theme option {
 }
 
 
-/* Tailwind-style dark backgrounds that need a light-theme override */
+/* ==========================================================================
+   24. UPSTOX TOKEN / FORM INPUTS
+   ========================================================================== */
 
-body.light-theme .bg-slate-950 {
-  background-color: var(--bg-main) !important;
+body.light-theme input {
+  color: #182230;
 }
 
-body.light-theme .bg-slate-900 {
-  background-color: var(--bg-card) !important;
+body.light-theme input::placeholder {
+  color: #98a2b3;
 }
 
-body.light-theme .bg-slate-800 {
-  background-color: var(--bg-card-hover) !important;
+body.light-theme #upstox-token-input {
+  background-color: #ffffff !important;
+  color: #182230 !important;
+  border-color: #d5dae1 !important;
 }
 
-
-/* Tailwind-style text overrides */
-
-body.light-theme .text-white {
-  color: var(--color-text-light) !important;
-}
-
-body.light-theme .text-slate-50 {
-  color: var(--color-text-light) !important;
-}
-
-body.light-theme .text-slate-300 {
-  color: #475467 !important;
-}
-
-body.light-theme .text-slate-400 {
-  color: var(--color-text-muted) !important;
-}
-
-body.light-theme .text-slate-500 {
-  color: #7b8492 !important;
-}
-
-
-/* Border overrides */
-
-body.light-theme .border-slate-800 {
-  border-color: var(--border-color) !important;
-}
-
-body.light-theme .border-slate-700 {
-  border-color: var(--border-active) !important;
+body.light-theme #upstox-token-input::placeholder {
+  color: #98a2b3 !important;
 }
 
 
 /* ==========================================================================
-   16. Light Theme - Primary Buttons
+   25. LIGHT THEME BUTTONS
    ========================================================================== */
 
-body.light-theme .bg-blue-600 {
-  background-color: var(--color-primary) !important;
+body.light-theme #analyze-btn {
+  background-color: #315bb5 !important;
+  color: #ffffff !important;
 }
 
-body.light-theme .hover\:bg-blue-700:hover {
-  background-color: var(--color-primary-hover) !important;
+body.light-theme #analyze-btn:hover {
+  background-color: #264a98 !important;
 }
 
-body.light-theme .text-blue-400 {
+
+body.light-theme #manual-analyze-btn {
+  background-color: #eef1f5 !important;
   color: #315bb5 !important;
+  border-color: #c7cdd5 !important;
 }
 
-body.light-theme .text-blue-500 {
+body.light-theme #manual-analyze-btn:hover {
+  background-color: #e4e7ec !important;
+}
+
+
+body.light-theme #upstox-login-btn {
+  background-color: #eef1f5 !important;
   color: #315bb5 !important;
+  border-color: #c7cdd5 !important;
+}
+
+body.light-theme #upstox-login-btn:hover {
+  background-color: #e4e7ec !important;
+}
+
+
+/* Scenario launcher */
+
+body.light-theme #open-scenario-btn {
+  background-color: #ffffff !important;
+  color: #344054 !important;
+  border-color: #c7cdd5 !important;
+}
+
+body.light-theme #open-scenario-btn:hover {
+  background-color: #eef1f5 !important;
+  color: #182230 !important;
+}
+
+
+/* Scenario calculate button */
+
+body.light-theme #simulate-btn {
+  background-color: #315bb5 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme #simulate-btn:hover {
+  background-color: #264a98 !important;
 }
 
 
 /* ==========================================================================
-   17. Theme Transition Protection
+   26. METRIC CARDS
    ========================================================================== */
 
-body.theme-changing *,
-body.theme-changing *::before,
-body.theme-changing *::after {
-  transition-duration: 0.15s !important;
+body.light-theme #tot-current,
+body.light-theme #avg-confidence {
+  color: #182230 !important;
 }
+
+body.light-theme #tot-predicted {
+  color: #315bb5 !important;
+}
+
+body.light-theme #tot-change {
+  color: #0f8a68 !important;
+}
+
+
+/* ==========================================================================
+   27. CHART ACCURACY BADGE
+   ========================================================================== */
+
+body.light-theme #chart-accuracy {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  border-color: #334155 !important;
+}
+
+
+/* ==========================================================================
+   28. RESULTS TABLE LIGHT THEME
+   ========================================================================== */
+
+body.light-theme table thead {
+  color: #667085 !important;
+}
+
+body.light-theme table tbody {
+  color: #253142 !important;
+}
+
+body.light-theme table th {
+  color: #667085 !important;
+}
+
+body.light-theme table td {
+  color: #253142 !important;
+}
+
+
+/* Keep positive / negative values readable */
+
+body.light-theme table .text-emerald-400,
+body.light-theme table .text-emerald-500 {
+  color: #0f8a68 !important;
+}
+
+body.light-theme table .text-rose-400,
+body.light-theme table .text-rose-500 {
+  color: #d63b55 !important;
+}
+
+
+/* ==========================================================================
+   29. TRANSITIONS
+   ========================================================================== */
+
+body,
+header,
+aside,
+main,
+footer,
+button,
+input,
+select,
+textarea,
+.glass-panel,
+#scenario-modal-panel,
+#tv-chart {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+
+/* ==========================================================================
+   30. RESPONSIVE SAFETY
+   ========================================================================== */
+
+@media (max-width: 768px) {
+
+  #tv-chart {
+    height: 340px;
+    min-height: 340px;
+  }
+
+  .glass-panel {
+    border-radius: 0.65rem;
+  }
+}
+
+
+/* ==========================================================================
+   END OF STYLE SHEET
+   ========================================================================== */
